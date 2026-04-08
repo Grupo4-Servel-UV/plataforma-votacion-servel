@@ -12,17 +12,17 @@ Este repositorio contiene la planificación y el desarrollo del sistema de votac
 * Giovanni Vázquez 
 ---
 
-## Estrategia de Agrupación de Historias de Usuario
+## Estrategia de Agrupación de Historias de Usuario (Sprint Planning)
 
-El **Product Backlog** se ha estructurado en **7 iteraciones** estratégicas, agrupando las Historias de Usuario bajo criterios de **dependencias funcionales** y lógica de procesos electorales:
+El **Product Backlog** se estructura en **7 iteraciones** bajo un enfoque Ágil de *Vertical Slicing*. Priorizamos la entrega temprana de valor (MVP) por sobre las dependencias puramente técnicas, mitigando riesgos y asegurando el núcleo del sistema desde el día uno:
 
-1. **Arquitectura de Seguridad y Portal:** Priorización del anonimato del voto (**HU-14**) como requisito no funcional crítico y habilitación del punto de acceso público (**HU-01A**).
-2. **Registro e Identidad Ciudadana:** Consolidación de la **Gestión de Padrón (HU-07)** y el flujo de **Autenticación (HU-01B)**, vinculando la carga masiva de datos con la validación de identidad mediante OTP.
-3. **Gestión Administrativa de Procesos:** Centralización de las capacidades de configuración de nuevas votaciones (**HU-11**) y el mantenimiento del registro oficial de candidatos (**HU-13**).
-4. **Control Operativo y Papeleta Digital:** Implementación de la lógica de automatización de aperturas/cierres (**HU-05**) y la generación dinámica de la interfaz de sufragio (**HU-02**) según el perfil del votante.
-5. **Ejecución de Sufragio y Monitoreo:** Desarrollo del núcleo funcional del sistema para el registro de votos nominados y en blanco (**HU-03, HU-04**) junto al panel de control de la jornada en tiempo real (**HU-10**).
-6. **Auditoría e Integridad de Sistema:** Focalización exclusiva en la fiscalización técnica mediante un sistema de logs inmutables y trazabilidad cronológica de acciones (**HU-08**).
-7. **Escrutinio Final y Cierre de Sesiones:** Fase de finalización para el despliegue de resultados oficiales (**HU-06**), gestión de ediciones permitidas (**HU-12**) y protocolos de salida segura (**HU-09**).
+* **Sprint 1 - MVP y Sufragio:** Habilitación rápida de creación, papeleta y emisión del voto (HU-11, HU-02, HU-03) usando validaciones simuladas temporalmente para demostrar flujo.
+* **Sprint 2 - Arquitectura de Seguridad:** Implementación de OTP real (HU-01B) y separación de tablas en base de datos para garantizar el anonimato (HU-14).
+* **Sprint 3 - Ingesta y Entidades:** Carga masiva del padrón de votantes (HU-07) y gestión oficial de candidatos (HU-13).
+* **Sprint 4 - Lógica Operativa:** Automatización de fechas de apertura/cierre (HU-05), voto en blanco (HU-04) y dashboard de monitoreo (HU-10).
+* **Sprint 5 - Escrutinio y Trazabilidad:** Despliegue de resultados oficiales (HU-06) y sistema inmutable de auditoría y logs (HU-08).
+* **Sprint 6 - Casos Borde y Acceso Público:** Edición de procesos pendientes (HU-12) y portal informativo ciudadano sin login (HU-01A).
+* **Sprint 7 - Aseguramiento de Calidad:** Cierre seguro de sesiones (HU-09), resolución de bugs y estabilización final para la entrega.
 
 ---
 
