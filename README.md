@@ -7,9 +7,9 @@ Este repositorio contiene la planificación y el desarrollo del sistema de votac
 ## Integrantes
 * Lorena Uribe 
 * Angel López
-* Andrós González
+* Andrés González
 * Lester González
-* Giovanni Vázquez 
+* Giovanni Vásquez 
 ---
 
 ## Estrategia de Agrupación de Historias de Usuario (Sprint Planning)
