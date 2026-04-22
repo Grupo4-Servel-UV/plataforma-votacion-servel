@@ -1,0 +1,16 @@
+{
+    "name": "@servel/database",
+    "version": "1.0.0",
+    "private": true,
+    "main": "src/index.ts",
+    "dependencies": {
+        "@servel/contracts": "workspace:*",
+        "@nestjs/common": "^10.4.22",
+        "@nestjs/typeorm": "^10.0.2",
+        "pg": "^8.13.1",
+        "typeorm": "^0.3.28"
+    },
+    "devDependencies": {
+        "@types/node": "^25.6.0"
+    }
+}

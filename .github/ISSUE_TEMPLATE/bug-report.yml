@@ -1,0 +1,68 @@
+name: "Reporte de Bug / Incidencia"
+description: "Documentar un error estructurado para agilizar su reproducción y resolución."
+title: "fix: [Breve descripción del problema]"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Atención:** Antes de abrir este ticket, verifica en el tablero Kanban o en los Issues cerrados que este error no haya sido reportado previamente.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Descripción del Problema"
+      description: "Explica de forma concisa qué está fallando y cuál es el impacto en el negocio o la experiencia de usuario."
+      placeholder: "Al intentar emitir un voto en blanco, el sistema lanza un error 500 en lugar de registrar la transacción."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: "Pasos para Reproducir (STR)"
+      description: "Enumera de forma determinista los pasos exactos que un desarrollador debe seguir para que el error ocurra en su máquina local."
+      value: |
+        1. Iniciar sesión como usuario validado.
+        2. Navegar hacia la URL `/papeleta/123`.
+        3. Dejar todas las opciones desmarcadas.
+        4. Hacer clic en el botón 'Emitir Voto'.
+        5. Observar el resultado.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      label: "Comportamiento Esperado vs. Actual"
+      description: "Contraste técnico."
+      value: |
+        **Comportamiento Esperado:** **Comportamiento Actual:** validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: "Entorno de Ejecución"
+      description: "¿Dónde se detectó este fallo?"
+      options:
+        - "Production (Producción)"
+        - "Staging / QA"
+        - "Development (Local)"
+    validations:
+      required: true
+
+  - type: input
+    id: component_version
+    attributes:
+      label: "Versión / Commit Hash"
+      description: "Indica la versión de la Release o el hash del commit donde probaste esto (ej. v1.2.0 o abc123f)."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs_and_media
+    attributes:
+      label: "Logs, Trazas de Error y Capturas (Evidencia)"
+      description: "Pega aquí los logs de la consola del navegador, trazas del backend, o arrastra imágenes/videos que demuestren el fallo."
+      render: shell
