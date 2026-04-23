@@ -20,7 +20,7 @@ jobs:
 
             - name: Semantic Release
               id: semantic
-              uses: cycjimmy/semantic-release-action@v4
+              uses: cycjimmy/semantic-release-action@v6
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               #? Nota: Requiere un archivo .releaserc en la raíz para configurar plugins si se desea
