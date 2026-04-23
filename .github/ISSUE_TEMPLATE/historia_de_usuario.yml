@@ -1,0 +1,38 @@
+name: "Historia de Usuario (HU)"
+description: "Registrar un nuevo requisito de valor alineado al Kanban."
+title: "feat: [Nombre corto de la característica]"
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: user_story
+    attributes:
+      label: "Descripción de la Historia"
+      description: "Como [rol], quiero [acción] para [resultado/valor]."
+      placeholder: "Como usuario registrado, quiero..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Criterios de Aceptación (Quality Gates)"
+      description: "Define las condiciones exactas para considerar esta HU como 'Done'. (Se recomienda formato Gherkin: Dado/Cuando/Entonces)."
+      value: |
+        - [ ] Criterio 1: 
+        - [ ] Criterio 2: 
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_notes
+    attributes:
+      label: "Notas Técnicas, Restricciones o Feature Flags"
+      description: "Arquitectura sugerida, dependencias externas o configuraciones de entorno necesarias."
+
+  - type: checkboxes
+    id: tracking
+    attributes:
+      label: "Trazabilidad"
+      options:
+        - label: "Confirmado con el Product Owner / Stakeholders"
+          required: true

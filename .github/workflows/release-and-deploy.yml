@@ -1,0 +1,66 @@
+name: Continuous Delivery & Deployment
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    semantic-release:
+        name: Semantic Versioning & Changelog
+        runs-on: ubuntu-latest
+        outputs:
+            new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+            new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Semantic Release
+              id: semantic
+              uses: cycjimmy/semantic-release-action@v4
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              #? Nota: Requiere un archivo .releaserc en la raíz para configurar plugins si se desea
+
+    deploy-staging:
+        name: Deploy to Staging Environment
+        needs: semantic-release
+        environment:
+            # TODO: create enviroment "staging"
+            name: staging
+            url: "https://staging.tu-proyecto.com"
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Deploy to Staging
+              run: |
+                  echo "Desplegando en Staging con la variable: ${{ vars.API_ENDPOINT }}"
+                  # ./scripts/deploy.sh --env staging
+
+    deploy-production:
+        name: Deploy to Production Environment
+        needs: [ semantic-release, deploy-staging ]
+        if: needs.semantic-release.outputs.new_release_published == 'true'
+        environment:
+            # TODO: create enviroment "production"
+            name: production
+            url: "https://tu-proyecto.com"
+        runs-on: ubuntu-latest
+        steps:
+            - name: "Checkout Code (Tag: ${{
+                  needs.semantic-release.outputs.new_release_version }})"
+              uses: actions/checkout@v4
+              with:
+                  ref: v${{ needs.semantic-release.outputs.new_release_version }}
+
+            - name: Execute Production Deployment
+              env:
+                  PROD_SECRET_KEY: ${{ secrets.PROD_SECRET_KEY }}
+              run: |
+                  echo "Desplegando versión ${{ needs.semantic-release.outputs.new_release_version }} en Producción..."
+                  # ./scripts/deploy.sh --env production

@@ -1,0 +1,39 @@
+name: "Deuda Técnica / Refactor"
+description: "Proponer mejoras en el código que no son nuevas funcionalidades ni errores."
+title: "chore: [Área a refactorizar]"
+labels: ["technical-debt", "refactor"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: "Contexto Actual"
+      description: "¿Qué parte del código necesita atención y por qué es un problema ahora?"
+      placeholder: "La lógica de validación en el backend está duplicada en tres servicios diferentes."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Propuesta de Mejora"
+      description: "¿Cómo planeas reestructurar el código?"
+      placeholder: "Extraer la lógica a un middleware común o una clase de utilidad."
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: "Beneficio Esperado"
+      description: "¿Cómo impacta esto al equipo? (ej. mejor testeabilidad, menor tiempo de compilación, facilidad de mantenimiento)."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: risk_assessment
+    attributes:
+      label: "Evaluación de Riesgo"
+      options:
+        - label: "Requiere cambios en la base de datos"
+        - label: "Afecta a APIs públicas o contratos existentes"
+        - label: "Es un cambio puramente interno sin impacto en el comportamiento"

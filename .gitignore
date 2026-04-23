@@ -1,0 +1,126 @@
+# ==========================================
+# 1. Dependencias (Node.js)
+# ==========================================
+node_modules/
+/.pnp
+.pnp.js
+.pnp.cjs
+
+# ==========================================
+# 2. Compilación y Artefactos (Builds)
+# ==========================================
+# NestJS (API)
+/apps/api/dist/
+/dist/
+/build/
+
+# Next.js (Web - Preparación)
+/apps/web/.next/
+/apps/web/out/
+.next/
+out/
+
+# Caches de herramientas
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.nx/
+
+# ==========================================
+# 3. Variables de Entorno y Secretos
+# ==========================================
+# NUNCA subir secretos al repositorio. Usar GitHub Secrets / Environments.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ==========================================
+# 4. Infraestructura y Docker
+# ==========================================
+# Ignorar el volumen de datos local de PostgreSQL
+pgdata/
+.docker/
+
+# ==========================================
+# 5. Logs y Testing
+# ==========================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Reportes de cobertura (Jest/Cypress/Playwright)
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# ==========================================
+# 6. Sistema Operativo y Archivos Temporales
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+*.tmp
+
+# ==========================================
+# 7. Editores de Código e IDEs
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

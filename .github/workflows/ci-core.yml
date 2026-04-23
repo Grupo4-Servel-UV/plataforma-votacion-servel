@@ -1,0 +1,46 @@
+name: Reusable CI Core
+
+on:
+    workflow_call:
+        # Permite pasar secretos desde el workflow que lo invoca si es necesario
+        secrets:
+            SONAR_TOKEN:
+                required: false
+
+jobs:
+    quality-gates:
+        name: Code Quality & Security SAST
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Initialize GitHub CodeQL
+              uses: github/codeql-action/init@v3
+              with:
+                  languages: "cpp, python, javascript" # Ajusta dinámicamente a los lenguajes de tu proyecto
+
+            # -------------------------------------------------------------
+            # AQUÍ: Inserción de la caché de dependencias (agnóstico)
+            # Ejemplo: actions/cache o setup-* actions (setup-node, setup-python)
+            # -------------------------------------------------------------
+
+            - name: Linter / Formatter (Fail-Fast)
+              run: |
+                  echo "Ejecutando linters agnósticos..."
+                  # ./scripts/lint.sh
+
+            - name: Build / Compile
+              run: |
+                  echo "Compilando el proyecto..."
+                  # ./scripts/build.sh
+
+            - name: Unit & Integration Tests
+              run: |
+                  echo "Ejecutando suite de pruebas..."
+                  # ./scripts/test.sh --coverage
+
+            - name: Perform CodeQL Security Analysis
+              uses: github/codeql-action/analyze@v3
+              with:
+                  category: "/language:all"
