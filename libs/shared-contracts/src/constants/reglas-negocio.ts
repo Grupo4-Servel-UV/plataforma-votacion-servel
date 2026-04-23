@@ -1,0 +1,4 @@
+export const REGLAS_NEGOCIO = {
+  MIN_DIAS_ANTICIPACION: 14,
+  MS_POR_DIA: 24 * 60 * 60 * 1000,
+};
