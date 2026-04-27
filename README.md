@@ -85,6 +85,15 @@ El desarrollo local se conecta directamente a instancias de Supabase. Copia las 
 cp apps/api/.env.example apps/api/.env.development
 ```
 
+### Variables de Entorno — Frontend (apps/web)
+
+Crea el archivo `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+```
+
+> Si no existe este archivo, el frontend apuntará por defecto a `http://localhost:3001/api/v1`.
 **Ejemplo de configuración en `apps/api/.env.development`:**
 
 ```env
@@ -106,7 +115,6 @@ Ejecuta los comandos desde la raíz del monorepo utilizando filtros de workspace
 - **Levantar ecosistema completo:** `pnpm dev`
 - **Levantar solo API:** `pnpm start:api:dev`
 - **Levantar solo Frontend:** `pnpm start:web:dev`
-
 ## 4. Estándares de Código y Entorno de Desarrollo (DX)
 
 Se requiere el uso de **ESLint** (análisis estático y reglas de arquitectura) y **Prettier** (formateo de estilo). Los pipelines de CI rechazarán automáticamente cualquier código que no cumpla con ambos estándares.
