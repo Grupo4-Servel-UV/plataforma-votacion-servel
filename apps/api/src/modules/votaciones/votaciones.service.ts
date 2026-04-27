@@ -94,11 +94,11 @@ export class VotacionesService {
   }
 
   async findOne(id: string) {
-  const votacion = await this.votacionRepo.findOne({
-    where: { id },
-    relations: ['candidatos'],
-  });
-  if (!votacion) throw new NotFoundException('Votación no encontrada');
-  return votacion;
-}
+    const votacion = await this.votacionRepo.findOne({
+      where: { id },
+      relations: ['candidatos'],
+    });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    return votacion;
+  }
 }
