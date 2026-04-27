@@ -92,4 +92,11 @@ export class VotacionesService {
       order: { createdAt: 'DESC' },
     });
   }
+
+  async findOne(id: string) {
+  return this.votacionRepo.findOne({
+    where: { id },
+    relations: ['candidatos'],
+  });
+}
 }

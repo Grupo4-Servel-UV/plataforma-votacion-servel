@@ -9,9 +9,12 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@hookform/resolvers": "^5.2.2",
         "@servel/contracts": "workspace:*",
         "@servel/database": "workspace:*",
-        "@hookform/resolvers": "^5.2.2",
+        "canvas-confetti": "^1.9.4",
+        "framer-motion": "^12.38.0",
+        "lucide-react": "^1.11.0",
         "next": "16.2.4",
         "react": "19.2.4",
         "react-dom": "19.2.4",
@@ -20,6 +23,7 @@
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4",
+        "@types/canvas-confetti": "^1.9.0",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
