@@ -1,6 +1,9 @@
 import * as dotenv from 'dotenv';
+import * as path from 'path';
 
-dotenv.config();
+dotenv.config({
+  path: path.resolve(process.cwd(), '.env.development'),
+});
 
 export const env = {
   PORT: process.env.PORT ? parseInt(process.env.PORT) : 3001,

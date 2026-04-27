@@ -15,7 +15,7 @@ export function ElectionCard({ election, index }: { election: Election; index: n
   const { status, alreadyVoted } = election
   const disabled = alreadyVoted || status === "PENDIENTE"
   const s = statusStyles[status]
-  const href = status === "CERRADA" ? `/resultados/${election.id}` : `/votar/${election.id}`
+  const href = status === "CERRADA" ? `/resultados/${election.id}` : `/auth/${election.id}`
 
   const inner = (
     <>

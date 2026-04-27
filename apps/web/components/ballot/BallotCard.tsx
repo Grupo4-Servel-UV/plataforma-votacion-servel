@@ -1,3 +1,4 @@
+'use client'
 import { Check } from "lucide-react";
 import type { Candidate, Election } from "@/lib/mockData";
 import { motion } from "framer-motion";

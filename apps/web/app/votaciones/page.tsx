@@ -1,20 +1,17 @@
 import { API_BASE_URL } from '@/lib/config';
 import { Votacion } from '@servel/contracts';
 import Link from 'next/link';
+import { Plus, Inbox } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 async function getVotaciones(): Promise<Votacion[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/votaciones`, {
-      cache: 'no-store',
-    });
-
+    const res = await fetch(`${API_BASE_URL}/votaciones`, { cache: 'no-store' });
     if (!res.ok) {
       console.error('Error fetching votaciones:', res.status);
       return [];
     }
-
     const data = await res.json();
     return data.body || data || [];
   } catch (error) {
@@ -23,61 +20,94 @@ async function getVotaciones(): Promise<Votacion[]> {
   }
 }
 
+const statusStyles = {
+  ACTIVA: { dot: 'bg-success animate-pulse-dot', text: 'text-success', border: 'border-success/30 bg-success/10' },
+  PENDIENTE: { dot: 'bg-secondary', text: 'text-secondary', border: 'border-secondary/30 bg-secondary/10' },
+  CERRADA: { dot: 'bg-destructive', text: 'text-destructive', border: 'border-destructive/30 bg-destructive/10' },
+} as const
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 export default async function VotacionesPage() {
   const votaciones = await getVotaciones();
 
   return (
-    <div className="mx-auto max-w-5xl p-6 text-slate-900">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Listado de Votaciones</h1>
-        <Link
-          href="/votaciones/crear"
-          className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-        >
-          Crear Nueva Votación
-        </Link>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="flex items-end justify-between gap-4 border-b border-border pb-6">
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Panel administrativo</p>
+            <h1 className="mt-1 text-2xl font-bold uppercase tracking-tight text-foreground">Listado de Votaciones</h1>
+          </div>
+          <Link
+            href="/votaciones/create"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            <Plus className="h-4 w-4" />
+            Crear Nueva Votación
+          </Link>
+        </div>
 
-      {votaciones.length === 0 ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-8 text-center text-slate-500">
-          No hay votaciones registradas.
+        <div className="mt-8">
+          {votaciones.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-border bg-card px-6 py-16 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Inbox className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Sin votaciones registradas</h3>
+              <p className="max-w-sm text-xs text-muted-foreground">
+                Aún no se ha creado ningún proceso electoral. Comienza creando la primera votación.
+              </p>
+              <Link
+                href="/votaciones/create"
+                className="mt-2 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Crear Nueva Votación
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-border bg-card">
+              <div className="h-1 w-full bg-primary" />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nombre</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estado</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Apertura</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cierre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {votaciones.map((v) => {
+                      const s = statusStyles[v.estado as keyof typeof statusStyles] ?? statusStyles.PENDIENTE
+                      return (
+                        <tr key={v.id} className="border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40">
+                          <td className="px-5 py-4 font-semibold text-foreground">{v.nombre}</td>
+                          <td className="px-5 py-4">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold ${s.border} ${s.text}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                              {v.estado}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-xs text-muted-foreground">{formatDate(v.fechaApertura)}</td>
+                          <td className="px-5 py-4 text-xs text-muted-foreground">{formatDate(v.fechaCierre)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="overflow-x-auto rounded-md border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-800">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Nombre</th>
-                <th className="px-4 py-3 font-semibold">Estado</th>
-                <th className="px-4 py-3 font-semibold">Apertura</th>
-                <th className="px-4 py-3 font-semibold">Cierre</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {votaciones.map((votacion) => (
-                <tr key={votacion.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">{votacion.nombre}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        votacion.estado === 'PENDIENTE'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : votacion.estado === 'ACTIVA'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-slate-100 text-slate-800'
-                      }`}
-                    >
-                      {votacion.estado}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{new Date(votacion.fechaApertura).toLocaleString()}</td>
-                  <td className="px-4 py-3">{new Date(votacion.fechaCierre).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </div>
     </div>
-  );
+  )
 }
