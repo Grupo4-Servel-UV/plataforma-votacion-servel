@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE_URL } from '@/lib/config'
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,7 +25,7 @@ export default function VotePage() {
   const [code, setCode] = useState('')
 
   useEffect(() => {
-    fetch(`http://localhost:3001/api/v1/votaciones/${id}`)
+    fetch(`${API_BASE_URL}/votaciones/${id}`)
       .then((r) => r.json())
       .then((data) => setElection(toElectionView(data.body ?? data)))
       .catch(() => router.push('/'))

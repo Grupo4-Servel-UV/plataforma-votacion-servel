@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/lib/config'
 import { ServelHeader, ServelFooter } from '@/components/layout/ServelHeader'
 import { ElectionCard } from '@/components/elections/ElectionCard'
 import { toElectionView } from '@/lib/adapters'
@@ -6,7 +7,7 @@ import { ShieldCheck, Lock, FileCheck } from 'lucide-react'
 
 async function getVotaciones(): Promise<Votacion[]> {
   try {
-    const res = await fetch('http://localhost:3001/api/v1/votaciones', {
+    const res = await fetch(`${API_BASE_URL}/votaciones`, {
       cache: 'no-store',
     })
     if (!res.ok) return []

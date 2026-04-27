@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
 import { CandidatoEntity, VotacionEntity } from '@servel/database';
@@ -94,9 +94,11 @@ export class VotacionesService {
   }
 
   async findOne(id: string) {
-  return this.votacionRepo.findOne({
+  const votacion = await this.votacionRepo.findOne({
     where: { id },
     relations: ['candidatos'],
   });
+  if (!votacion) throw new NotFoundException('Votación no encontrada');
+  return votacion;
 }
 }
