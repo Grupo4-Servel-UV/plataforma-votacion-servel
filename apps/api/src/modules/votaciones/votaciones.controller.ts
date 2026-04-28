@@ -30,4 +30,9 @@ export class VotacionesController {
   async findAll() {
     return this.votacionesService.findAll();
   }
+
+  @Get(':id')
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.votacionesService.findOne(id);
+}
 }
