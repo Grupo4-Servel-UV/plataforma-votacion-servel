@@ -8,8 +8,9 @@ export const VotacionSchema = z.object({
   fechaApertura: z.iso.datetime(),
   fechaCierre: z.iso.datetime(),
   estado: z.enum(EstadoVotacion),
-  zonaRestriccionId: z.number().nullable(),
-  comunidadIndigenaReq: z.boolean(),
+  region: z.string().nullable(),
+  comuna: z.string().nullable(),
+  comunidadIndigena: z.string().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 

@@ -21,8 +21,11 @@ export class VotacionesService {
         fechaApertura: input.fechaApertura,
         fechaCierre: input.fechaCierre,
         estado: EstadoVotacion.PENDIENTE,
-        comunidadIndigenaReq: input.restricciones?.comunidadIndigena,
-        zonaRestriccionId: input.restricciones?.zonaId,
+        region: input.restricciones?.region,
+        comuna: input.restricciones?.comuna,
+        comunidades: input.restricciones?.comunidadesIndigenas?.map((nombre) => ({
+          comunidad: nombre,
+        })),
       });
 
       const votacionGuardada = await this.votacionRepo.save(nuevaVotacion);

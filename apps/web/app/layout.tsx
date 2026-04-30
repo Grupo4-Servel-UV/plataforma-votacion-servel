@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { ServelHeader, ServelFooter } from '@/components/layout/ServelHeader';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ServelHeader />
+        {children}
+        <ServelFooter />
+      </body>
     </html>
   );
 }

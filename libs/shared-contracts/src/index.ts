@@ -1,3 +1,4 @@
+export * from './constants/territorial';
 export * from './constants/reglas-negocio';
 export * from './schemas/candidatos/candidato.schema';
 export * from './schemas/votaciones/create-votacion.schema';

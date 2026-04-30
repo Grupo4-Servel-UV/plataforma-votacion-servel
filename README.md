@@ -100,7 +100,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 PORT=3000
 NODE_ENV=development
 # Transaction pooler URL de Supabase (puerto 6543)
-DATABASE_URL="postgresql://postgres.[TU-PROYECTO]:[PASSWORD]@aws-0-[REGION][.pooler.supabase.com:6543/postgres](https://.pooler.supabase.com:6543/postgres)"
+URL_DB="postgresql://postgres.[TU-PROYECTO]:[PASSWORD]@aws-0-[REGION][.pooler.supabase.com:6543/postgres](https://.pooler.supabase.com:6543/postgres)"
 ```
 
 ### 3.3. Base de Datos y TypeORM

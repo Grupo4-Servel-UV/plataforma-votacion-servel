@@ -38,11 +38,15 @@ export default async function VotacionesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="flex items-end justify-between gap-4 border-b border-border pb-6">
+      <section className="bg-card border-b border-border">
+        <div className="mx-auto max-w-6xl px-6 py-10 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Panel administrativo</p>
-            <h1 className="mt-1 text-2xl font-bold uppercase tracking-tight text-foreground">Listado de Votaciones</h1>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-secondary font-bold">
+              Panel administrativo
+            </p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              Listado de votaciones
+            </h1>
           </div>
           <Link
             href="/votaciones/create"
@@ -52,6 +56,9 @@ export default async function VotacionesPage() {
             Crear Nueva Votación
           </Link>
         </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6 py-10">
 
         <div className="mt-8">
           {votaciones.length === 0 ? (

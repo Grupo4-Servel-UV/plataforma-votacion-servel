@@ -26,9 +26,7 @@ export default async function Home() {
   const closed = elections.filter((e) => e.status === 'CERRADA')
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <ServelHeader />
-
+    <>
       <section className="bg-card border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-10">
           <p className="text-[11px] uppercase tracking-[0.2em] text-secondary font-bold">
@@ -76,9 +74,7 @@ export default async function Home() {
           </Section>
         )}
       </main>
-
-      <ServelFooter />
-    </div>
+    </>
   )
 }
 
