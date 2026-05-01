@@ -23,6 +23,8 @@ export default function VotePage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('select')
   const [code, setCode] = useState('')
+  const [voteError, setVoteError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/votaciones/${id}`)
@@ -54,6 +56,39 @@ export default function VotePage() {
         colors: ['#003F8A', '#0068B4', '#C8151B', '#FFFFFF'],
       })
     }, 250)
+  }
+
+
+  const submitVote = async () => {
+    setVoteError(null)
+    const rut = typeof window !== 'undefined' ? sessionStorage.getItem('votante_rut') : null
+    if (!rut) {
+      setVoteError('No se encontró sesión de votante. Vuelve a autenticar.')
+      return false
+    }
+
+    const payload = isBlank ? { blank: true } : { candidateId: selected }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/votaciones/${id}/votar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rut, payload }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setVoteError(data.message ?? 'Error al registrar voto')
+        setSubmitting(false)
+        return false
+      }
+      setSubmitting(false)
+      return true
+    } catch (err) {
+      setSubmitting(false)
+      setVoteError('Error de red al enviar voto')
+      return false
+    }
   }
 
   return (
@@ -107,7 +142,12 @@ export default function VotePage() {
         candidate={isBlank ? null : candidate}
         isBlank={isBlank}
         onCancel={() => setPhase('select')}
-        onConfirm={() => setPhase('fold')}
+        onConfirm={async () => {
+          const ok = await submitVote()
+          if (ok) setPhase('fold')
+        }}
+        submitting={submitting}
+        error={voteError}
       />
 
       {phase === 'fold' && <BallotFoldAnimation onComplete={onComplete} />}

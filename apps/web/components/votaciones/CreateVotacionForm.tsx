@@ -2,19 +2,25 @@
 
 import { API_BASE_URL } from '@/lib/config';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Candidato, CreateVotacionSchema } from '@servel/contracts';
+import { 
+  Candidato, 
+  CreateVotacionSchema, 
+  DIVISION_TERRITORIAL, 
+  COMUNIDADES_INDIGENAS 
+} from '@servel/contracts';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { SubmitErrorHandler, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check } from 'lucide-react';
+import { X, Plus, Trash2, ShieldAlert } from 'lucide-react';
 
 const CreateVotacionFormSchema = CreateVotacionSchema.extend({
   candidatosIds: z
     .array(z.uuid('ID de candidato inválido'))
     .min(1, 'Debe seleccionar al menos un candidato'),
 });
+
 type CreateVotacionFormInput = z.input<typeof CreateVotacionFormSchema>;
 
 function localDateTimeToIso(value: string) {
@@ -30,7 +36,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
         {label}
       </label>
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   )
 }
@@ -42,13 +48,48 @@ export function CreateVotacionForm() {
   const [pendingData, setPendingData] = useState<CreateVotacionFormInput | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<CreateVotacionFormInput>({
+  // States para controlar la visibilidad de los requisitos
+  const [hasRegionReq, setHasRegionReq] = useState(false);
+  const [hasComunaReq, setHasComunaReq] = useState(false);
+  const [hasIndigenaReq, setHasIndigenaReq] = useState(false);
+
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<CreateVotacionFormInput>({
     resolver: zodResolver(CreateVotacionFormSchema),
     defaultValues: {
       candidatosIds: [],
-      restricciones: { comunidadIndigena: false },
+      restricciones: {
+        region: '',
+        comuna: '',
+        comunidadesIndigenas: [],
+      },
     },
   });
+
+  const selectedRegion = watch('restricciones.region');
+  const comunidadesSeleccionadas = watch('restricciones.comunidadesIndigenas') || [];
+
+  // Reset de valores cuando se desmarcan los requisitos
+  useEffect(() => {
+    if (!hasRegionReq) {
+      setValue('restricciones.region', '');
+      setValue('restricciones.comuna', '');
+      setHasComunaReq(false);
+    }
+  }, [hasRegionReq, setValue]);
+
+  useEffect(() => {
+    if (!hasComunaReq) {
+      setValue('restricciones.comuna', '');
+    }
+  }, [hasComunaReq, setValue]);
+
+  useEffect(() => {
+    if (!hasIndigenaReq) {
+      setValue('restricciones.comunidadesIndigenas', []);
+    } else if (comunidadesSeleccionadas.length === 0) {
+      setValue('restricciones.comunidadesIndigenas', ['']);
+    }
+  }, [hasIndigenaReq, setValue, comunidadesSeleccionadas.length]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/candidatos/disponibles`)
@@ -58,7 +99,12 @@ export function CreateVotacionForm() {
   }, []);
 
   const onSubmit = (data: CreateVotacionFormInput) => {
-    setPendingData(data);
+    const finalData = JSON.parse(JSON.stringify(data)); // Clonado profundo simple
+    if (!hasRegionReq) delete finalData.restricciones.region;
+    if (!hasComunaReq) delete finalData.restricciones.comuna;
+    if (!hasIndigenaReq) delete finalData.restricciones.comunidadesIndigenas;
+
+    setPendingData(finalData);
     setShowConfirmModal(true);
   };
 
@@ -79,8 +125,6 @@ export function CreateVotacionForm() {
         body: JSON.stringify({ candidatosIds }),
         headers: { 'Content-Type': 'application/json' },
       });
-      setPendingData(null);
-      setShowConfirmModal(false);
       router.push('/votaciones');
       router.refresh();
     } catch (error) {
@@ -95,162 +139,206 @@ export function CreateVotacionForm() {
     console.error('[CreateVotacionForm] Errores de validación:', formErrors);
   };
 
-  const formErrors = errors as Record<string, { message?: string }>;
-  const errFechaApertura = errors.fechaApertura?.message || formErrors['fecha_apertura']?.message;
-  const errFechaCierre = errors.fechaCierre?.message || formErrors['fecha_cierre']?.message;
-
-  const inputClass = "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all text-sm";
+  const inputClass = "w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all text-sm disabled:opacity-50 disabled:bg-muted";
+  const checkboxClass = "h-4 w-4 rounded border-input text-primary focus:ring-primary/15 cursor-pointer";
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-5">
-
-        <Field label="Nombre de la Votación" error={errors.nombre?.message}>
-          <input
-            {...register('nombre')}
-            className={inputClass}
-            placeholder="Ej: Presidencial 2026"
-          />
-        </Field>
-
-        <Field label="Fecha de Apertura" error={errFechaApertura as string}>
-          <input
-            type="datetime-local"
-            {...register('fechaApertura', { setValueAs: localDateTimeToIso })}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Fecha de Cierre" error={errFechaCierre as string}>
-          <input
-            type="datetime-local"
-            {...register('fechaCierre', { setValueAs: localDateTimeToIso })}
-            className={inputClass}
-          />
-        </Field>
-
-        {/* RESTRICCIONES */}
-        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Restricciones (Opcionales)
-          </h3>
-          <Field label="ID de Zona Restringida">
-            <input
-              type="number"
-              {...register('restricciones.zonaId', {
-                setValueAs: (v) => (v === '' ? undefined : parseInt(v, 10)),
-              })}
-              className={inputClass}
-              placeholder="Ej: 10"
-            />
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+        
+        <div className="space-y-4">
+          <Field label="Nombre de la Votación" error={errors.nombre?.message}>
+            <input {...register('nombre')} className={inputClass} placeholder="Ej: Presidencial 2026" />
           </Field>
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              {...register('restricciones.comunidadIndigena')}
-              className="h-4 w-4 rounded border-input text-primary focus:ring-primary/15"
-            />
-            <span className="text-sm text-foreground">Requisito de Comunidad Indígena</span>
-          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Fecha de Apertura" error={errors.fechaApertura?.message}>
+              <input type="datetime-local" {...register('fechaApertura', { setValueAs: localDateTimeToIso })} className={inputClass} />
+            </Field>
+            <Field label="Fecha de Cierre" error={errors.fechaCierre?.message}>
+              <input type="datetime-local" {...register('fechaCierre', { setValueAs: localDateTimeToIso })} className={inputClass} />
+            </Field>
+          </div>
         </div>
 
-        {/* CANDIDATOS */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        {/* SECCIÓN DE RESTRICCIONES */}
+        <div className="rounded-xl border border-border bg-muted/10 p-5 space-y-5">
+          <div className="flex items-center gap-2 text-primary">
+            <ShieldAlert className="h-4 w-4" />
+            <h3 className="text-xs font-black uppercase tracking-widest">Restricciones (Opcionales)</h3>
+          </div>
+
+          <div className="space-y-6">
+            {/* REGIÓN */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={hasRegionReq} 
+                  onChange={(e) => setHasRegionReq(e.target.checked)} 
+                  className={checkboxClass} 
+                />
+                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Requisito de Región</span>
+              </label>
+
+              {hasRegionReq && (
+                <div className="space-y-4 pl-7 animate-in fade-in slide-in-from-left-2 duration-200">
+                  <select {...register('restricciones.region')} className={inputClass}>
+                    <option value="">Seleccione una región...</option>
+                    {Object.keys(DIVISION_TERRITORIAL || {}).map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="checkbox" 
+                        checked={hasComunaReq} 
+                        onChange={(e) => setHasComunaReq(e.target.checked)} 
+                        className={checkboxClass} 
+                      />
+                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Requisito de Comuna</span>
+                    </label>
+
+                    {hasComunaReq && (
+                      <div className="pl-7 animate-in fade-in slide-in-from-left-2 duration-200">
+                        <select 
+                          {...register('restricciones.comuna')} 
+                          disabled={!selectedRegion} 
+                          className={inputClass}
+                        >
+                          <option value="">{!selectedRegion ? 'Primero seleccione región...' : 'Seleccione una comuna...'}</option>
+                          {selectedRegion && (DIVISION_TERRITORIAL?.[selectedRegion] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <hr className="border-border/50" />
+
+            {/* COMUNIDAD INDÍGENA */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={hasIndigenaReq} 
+                  onChange={(e) => setHasIndigenaReq(e.target.checked)} 
+                  className={checkboxClass} 
+                />
+                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Requisito de Comunidad Indígena</span>
+              </label>
+
+              {hasIndigenaReq && (
+                <div className="space-y-3 pl-7 animate-in fade-in slide-in-from-left-2 duration-200">
+                  {comunidadesSeleccionadas.map((_, index) => (
+                    <div key={index} className="flex gap-2">
+                      <select 
+                        value={comunidadesSeleccionadas[index]}
+                        onChange={(e) => {
+                          const newComs = [...comunidadesSeleccionadas];
+                          newComs[index] = e.target.value;
+                          setValue('restricciones.comunidadesIndigenas', newComs);
+                        }}
+                        className={inputClass}
+                      >
+                        <option value="">Seleccione comunidad...</option>
+                        {comunidadesSeleccionadas.length === 1 && <option value="Cualquiera">Cualquiera</option>}
+                        {(COMUNIDADES_INDIGENAS || []).map(c => (
+                          <option 
+                            key={c} 
+                            value={c} 
+                            disabled={comunidadesSeleccionadas.includes(c) && comunidadesSeleccionadas[index] !== c}
+                          >
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      {index > 0 && (
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newComs = comunidadesSeleccionadas.filter((__, i) => i !== index);
+                            setValue('restricciones.comunidadesIndigenas', newComs);
+                          }}
+                          className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {!comunidadesSeleccionadas.includes('Cualquiera') && comunidadesSeleccionadas.length < (COMUNIDADES_INDIGENAS || []).length && (
+                    <button 
+                      type="button"
+                      onClick={() => setValue('restricciones.comunidadesIndigenas', [...comunidadesSeleccionadas, ''])}
+                      className="flex items-center gap-2 text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-md transition-colors w-fit"
+                    >
+                      <Plus className="h-3 w-3" /> AÑADIR COMUNIDAD
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block text-xs font-black uppercase tracking-widest text-muted-foreground">
             Seleccionar Candidatos
           </label>
           {candidatos.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              No hay candidatos registrados disponibles.
+            <div className="rounded-xl border-2 border-dashed border-border p-8 text-center text-sm text-muted-foreground bg-muted/5">
+              No hay candidatos disponibles.
             </div>
           ) : (
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-card divide-y divide-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1 pr-2 custom-scrollbar">
               {candidatos.map((c) => (
-                <label key={c.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/40 transition-colors">
-                  <input
-                    type="checkbox"
-                    value={c.id}
-                    {...register('candidatosIds')}
-                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary/15"
-                  />
-                  <span className="text-sm font-medium text-foreground">
-                    {c.nombres} {c.apellidos}
-                  </span>
+                <label key={c.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all">
+                  <input type="checkbox" value={c.id} {...register('candidatosIds')} className={checkboxClass} />
+                  <span className="text-sm font-semibold">{c.nombres} {c.apellidos}</span>
                 </label>
               ))}
             </div>
           )}
-          {errors.candidatosIds && (
-            <p className="text-xs text-destructive">{errors.candidatosIds.message as string}</p>
-          )}
+          {errors.candidatosIds && <p className="text-xs text-destructive font-medium">{errors.candidatosIds.message as string}</p>}
         </div>
 
         <button
           type="submit"
           disabled={isSaving}
-          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-black text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 active:scale-[0.98]"
         >
-          Crear Votación
+          {isSaving ? 'PROCESANDO...' : 'CREAR VOTACIÓN'}
         </button>
       </form>
 
-      {/* MODAL DE CONFIRMACIÓN */}
       <AnimatePresence>
         {showConfirmModal && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/45 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setShowConfirmModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 12 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 25 }}
-              className="relative w-full max-w-md rounded-md bg-card shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl p-8"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="bg-primary text-primary-foreground px-6 py-4 flex items-start justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-primary-foreground/70">
-                    Confirmación
-                  </p>
-                  <h3 className="text-lg font-bold mt-0.5">¿Confirmar creación?</h3>
-                </div>
-                <button onClick={() => setShowConfirmModal(false)} className="rounded-full p-1 hover:bg-primary-foreground/10">
-                  <X className="h-5 w-5" />
+              <h3 className="text-xl font-black tracking-tight text-foreground">¿Confirmar Creación?</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Se creará la votación <span className="font-bold text-foreground">"{pendingData?.nombre}"</span>.
+              </p>
+              
+              <div className="mt-8 flex gap-3">
+                <button onClick={() => setShowConfirmModal(false)} className="flex-1 rounded-xl border border-border px-4 py-3 text-sm font-bold hover:bg-muted transition-colors">CANCELAR</button>
+                <button onClick={handleConfirm} disabled={isSaving} className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+                  {isSaving ? 'GUARDANDO...' : 'CONFIRMAR'}
                 </button>
-              </div>
-              <div className="p-6">
-                <div className="border-2 border-primary/30 rounded-md bg-primary/5 px-5 py-4">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Votación</p>
-                  <p className="mt-1 text-lg font-bold uppercase tracking-wide text-foreground">
-                    {pendingData?.nombre}
-                  </p>
-                </div>
-                <p className="mt-4 text-xs text-muted-foreground text-center">
-                  Una vez creada, la votación quedará en estado pendiente.
-                </p>
-                <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmModal(false)}
-                    disabled={isSaving}
-                    className="flex-1 rounded-md border border-primary bg-card px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                  >
-                    CANCELAR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    disabled={isSaving}
-                    className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {isSaving ? 'Guardando...' : 'CONFIRMAR'}
-                  </button>
-                </div>
               </div>
             </motion.div>
           </motion.div>

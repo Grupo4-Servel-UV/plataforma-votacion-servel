@@ -8,9 +8,11 @@ interface Props {
   isBlank: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  submitting?: boolean;
+  error?: string | null;
 }
 
-export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm }: Props) {
+export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm, submitting = false, error = null }: Props) {
   return (
     <AnimatePresence>
       {open && (
@@ -62,6 +64,7 @@ export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm
                 Una vez emitido, su voto no podrá ser modificado ni anulado.
               </p>
 
+              {error && <div className="text-sm text-destructive mb-3 text-center">{error}</div>}
               <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2.5">
                 <button
                   onClick={onCancel}
@@ -71,9 +74,10 @@ export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+                  disabled={submitting}
+                  className={`flex-1 rounded-md px-4 py-2.5 text-sm font-bold text-primary-foreground transition-colors ${submitting ? 'bg-primary/60 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
                 >
-                  CONFIRMAR
+                  {submitting ? 'ENVIANDO...' : 'CONFIRMAR'}
                 </button>
               </div>
             </div>

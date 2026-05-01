@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UsePipes, Query } from '@nestjs/common';
 import {
   AsignarCandidatosInput,
   AsignarCandidatosSchema,
@@ -35,4 +35,21 @@ export class VotacionesController {
   async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.votacionesService.findOne(id);
 }
+
+  @Get(':id/eligibility')
+  async checkEligibility(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('rut') rut: string,
+  ) {
+    return this.votacionesService.checkEligibility(id, rut);
+  }
+
+  @Post(':id/votar')
+  async votar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: any,
+  ) {
+    // body expected: { rut: string, payload: any }
+    return this.votacionesService.castVote(id, body.rut, body.payload);
+  }
 }

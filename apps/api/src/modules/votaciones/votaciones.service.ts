@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
-import { CandidatoEntity, VotacionEntity } from '@servel/database';
+import { CandidatoEntity, VotacionEntity, VotanteEntity, ParticipacionEntity, VotoEntity } from '@servel/database';
 import { DataSource, In, Repository } from 'typeorm';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class VotacionesService {
@@ -11,6 +12,12 @@ export class VotacionesService {
     private readonly votacionRepo: Repository<VotacionEntity>,
     @InjectRepository(CandidatoEntity)
     private readonly candidatoRepo: Repository<CandidatoEntity>,
+    @InjectRepository(VotanteEntity)
+    private readonly votanteRepo: Repository<VotanteEntity>,
+    @InjectRepository(ParticipacionEntity)
+    private readonly participacionRepo: Repository<ParticipacionEntity>,
+    @InjectRepository(VotoEntity)
+    private readonly votoRepo: Repository<VotoEntity>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -21,8 +28,11 @@ export class VotacionesService {
         fechaApertura: input.fechaApertura,
         fechaCierre: input.fechaCierre,
         estado: EstadoVotacion.PENDIENTE,
-        comunidadIndigenaReq: input.restricciones?.comunidadIndigena,
-        zonaRestriccionId: input.restricciones?.zonaId,
+        region: input.restricciones?.region,
+        comuna: input.restricciones?.comuna,
+        comunidades: input.restricciones?.comunidadesIndigenas?.map((nombre) => ({
+          comunidad: nombre,
+        })),
       });
 
       const votacionGuardada = await this.votacionRepo.save(nuevaVotacion);
@@ -96,9 +106,111 @@ export class VotacionesService {
   async findOne(id: string) {
     const votacion = await this.votacionRepo.findOne({
       where: { id },
-      relations: ['candidatos'],
+      relations: ['candidatos', 'comunidades'],
     });
     if (!votacion) throw new NotFoundException('Votación no encontrada');
     return votacion;
+  }
+
+  async checkEligibility(votacionId: string, rut: string) {
+    const votacion = await this.votacionRepo.findOne({
+      where: { id: votacionId },
+      relations: ['comunidades'],
+    });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+
+    const clean = String(rut).replace(/\.|-|\s/g, '');
+    const votante = await this.votanteRepo
+      .createQueryBuilder('v')
+      .where("replace(replace(v.rut, '.', ''), '-', '') = :clean", { clean })
+      .getOne();
+
+    if (!votante) return { eligible: false, reasons: ['Votante no registrado'] };
+
+    const reasons: string[] = [];
+
+    if (votacion.region) {
+      if (!votante.region || votante.region !== votacion.region) {
+        reasons.push('Región no coincide');
+      }
+    }
+
+    if (votacion.comuna) {
+      if (!votante.comuna || votante.comuna !== votacion.comuna) {
+        reasons.push('Comuna no coincide');
+      }
+    }
+
+    const comunidades = (votacion as any).comunidades ?? [];
+    if (Array.isArray(comunidades) && comunidades.length > 0) {
+      const nombres = comunidades.map((c: any) => c.comunidad);
+      const match =
+        (votante.comunidadIndigena && nombres.includes(votante.comunidadIndigena)) ||
+        (votante.etnia && nombres.includes(votante.etnia));
+      if (!match) {
+        reasons.push('No pertenece a la(s) comunidad(es) requeridas');
+      }
+    }
+
+    // privacy-preserving check: derive a votante hash from the cleaned RUT
+    const rutClean = clean;
+    const secret = process.env.VOTANTE_HASH_SECRET ?? '';
+    let votanteHash: string;
+    if (secret) {
+      votanteHash = crypto.createHmac('sha256', secret).update(rutClean).digest('hex');
+    } else {
+      // fallback to plain hash when no secret configured (not recommended for production)
+      votanteHash = crypto.createHash('sha256').update(rutClean).digest('hex');
+    }
+
+    const already = await this.participacionRepo.findOne({ where: { votacionId, votanteHash } });
+    if (already) {
+      return { eligible: false, reasons: ['Ya ejerciste tu voto'] };
+    }
+
+    return { eligible: reasons.length === 0, reasons };
+  }
+
+  async castVote(votacionId: string, rut: string, payload: any) {
+    // validate votacion exists
+    const votacion = await this.votacionRepo.findOneBy({ id: votacionId });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+
+    const clean = String(rut).replace(/\.|-|\s/g, '');
+    const secret = process.env.VOTANTE_HASH_SECRET ?? '';
+    let votanteHash: string;
+    if (secret) {
+      votanteHash = require('crypto').createHmac('sha256', secret).update(clean).digest('hex');
+    } else {
+      votanteHash = require('crypto').createHash('sha256').update(clean).digest('hex');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // ensure not already voted (unique index will also protect)
+      const existing = await queryRunner.manager.findOne(ParticipacionEntity, { where: { votacionId, votanteHash } });
+      if (existing) throw new BadRequestException('Ya ejerciste tu voto');
+
+      // insert anonymous voto
+      await queryRunner.manager.insert(VotoEntity, { votacionId, payload });
+
+      // record participation (store only votanteHash)
+      await queryRunner.manager.insert(ParticipacionEntity, { votacionId, votanteHash });
+
+      await queryRunner.commitTransaction();
+      return { ok: true };
+    } catch (err: any) {
+      await queryRunner.rollbackTransaction();
+      if (err?.code === '23505' || err?.message?.includes('Ya ejerciste')) {
+        throw new BadRequestException('Ya ejerciste tu voto');
+      }
+      console.error('Error al registrar voto: ', err);
+      throw new InternalServerErrorException('Error al procesar el voto');
+    } finally {
+      await queryRunner.release();
+    }
   }
 }

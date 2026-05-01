@@ -8,8 +8,9 @@ export const CreateVotacionSchema = z
     fechaCierre: z.iso.datetime({ message: 'Formato de fecha de cierre inválido' }),
     restricciones: z
       .object({
-        zonaId: z.number().int().optional(),
-        comunidadIndigena: z.boolean().default(false),
+        region: z.string().optional(),
+        comuna: z.string().optional(),
+        comunidadesIndigenas: z.array(z.string()).optional(),
       })
       .optional(),
   })

@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { CandidatoEntity } from './candidato.entity';
+import { ComunidadVotacionEntity } from './comunidad-votacion.entity';
 
 @Entity('votaciones')
 export class VotacionEntity {
@@ -32,11 +33,16 @@ export class VotacionEntity {
   })
   estado!: EstadoVotacion;
 
-  @Column({ name: 'zona_restriccion_id', type: 'int', nullable: true })
-  zonaRestriccionId!: number | null;
+  @Column({ name: 'region', type: 'text', nullable: true })
+  region!: string | null;
 
-  @Column({ name: 'comunidad_indigena', type: 'boolean', default: false })
-  comunidadIndigenaReq!: boolean;
+  @Column({ name: 'comuna', type: 'text', nullable: true })
+  comuna!: string | null;
+
+  @OneToMany(() => ComunidadVotacionEntity, (comunidad) => comunidad.votacion, {
+    cascade: true,
+  })
+  comunidades!: ComunidadVotacionEntity[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
