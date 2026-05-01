@@ -21,6 +21,10 @@ export default function AuthPage() {
   const [secondsLeft, setSecondsLeft] = useState(300)
   const [attempts, setAttempts] = useState(3)
   const [otpError, setOtpError] = useState(false)
+  const [otpMessage, setOtpMessage] = useState<string | null>(null)
+  const [contactEmail, setContactEmail] = useState<string | null>(null)
+  const MAX_ATTEMPTS = 3
+  const OTP_TTL = 300
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/votaciones/${id}`)
@@ -79,9 +83,31 @@ export default function AuthPage() {
           setErr1('No estás habilitado en el padrón. Contacta a la autoridad.')
           return
         }
+        // capture email to show masked contact in OTP step
+        setContactEmail(payload.email ?? null)
 
+        // move to OTP step and request code
         setStep(2)
-        setSecondsLeft(300)
+        setSecondsLeft(OTP_TTL)
+        setAttempts(MAX_ATTEMPTS)
+        setOtpMessage(null)
+        try {
+          const send = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rut }),
+          })
+          if (!send.ok) {
+            const body = await send.json().catch(() => ({}))
+            setErr1(body.message ?? 'Error al enviar el código de verificación')
+            setStep(1)
+            return
+          }
+        } catch (err) {
+          setErr1('Error al enviar el código de verificación')
+          setStep(1)
+          return
+        }
       } catch (err) {
         setErr1('Error de conexión con el servidor')
       }
@@ -89,13 +115,40 @@ export default function AuthPage() {
   }
 
   const handleOtp = (code: string) => {
-    if (code.startsWith('0')) {
-      setOtpError(true)
-      setAttempts((a) => a - 1)
-      setTimeout(() => setOtpError(false), 600)
-      return
-    }
-    router.push(`/votar/${id}`)
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rut, otp: code }),
+        })
+        const data = await res.json().catch(() => ({}))
+        const body = data.body ?? data
+        if (res.ok && body.ok) {
+          router.push(`/votar/${id}`)
+          return
+        }
+
+        if (body.locked) {
+          setOtpMessage('Has sido bloqueado por demasiados intentos. Redirigiendo...')
+          setOtpError(true)
+          setTimeout(() => router.push('/'), 3000)
+          return
+        }
+
+        // body.attempts = failed attempts so far
+        if (typeof body.attempts === 'number') {
+          setAttempts(Math.max(0, MAX_ATTEMPTS - body.attempts))
+        } else {
+          setAttempts((a) => Math.max(0, a - 1))
+        }
+        setOtpError(true)
+        setOtpMessage('Código incorrecto. Intenta de nuevo.')
+        setTimeout(() => setOtpError(false), 600)
+      } catch (err) {
+        setOtpMessage('Error de conexión al verificar el código')
+      }
+    })()
   }
 
   const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
@@ -178,8 +231,12 @@ export default function AuthPage() {
                   className="space-y-5"
                 >
                   <p className="text-sm text-foreground/80 text-center">
-                    Ingresa el código de 6 dígitos enviado a tu teléfono registrado.
+                    Ingresa el código de 6 dígitos enviado a tu correo {maskEmail(contactEmail)}.
                   </p>
+                  {otpMessage && (
+                    <div className="rounded-md px-3 py-2 text-sm text-destructive">{otpMessage}</div>
+                  )}
+
                   <OTPInput onComplete={handleOtp} error={otpError} />
 
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -189,7 +246,24 @@ export default function AuthPage() {
 
                   <button
                     disabled={secondsLeft > 0}
-                    onClick={() => { setSecondsLeft(300); setAttempts(3) }}
+                    onClick={async () => {
+                      try {
+                        const r = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ rut }),
+                        })
+                        if (!r.ok) {
+                          const b = await r.json().catch(() => ({}))
+                          setOtpMessage(b.message ?? 'Error al reenviar código')
+                          return
+                        }
+                        setSecondsLeft(OTP_TTL)
+                        setOtpMessage('Código reenviado')
+                      } catch (e) {
+                        setOtpMessage('Error al reenviar código')
+                      }
+                    }}
                     className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
                   >
                     Reenviar código
@@ -211,4 +285,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   )
+}
+
+function maskEmail(email: string | null) {
+  if (!email) return 'registrado'
+  const [local, domain] = email.split('@')
+  if (!domain) return email
+  if (local.length <= 3) return `${local}@${domain}`
+  const masked = local.slice(0, 3) + 'X'.repeat(Math.max(3, local.length - 3))
+  return `${masked}@${domain}`
 }

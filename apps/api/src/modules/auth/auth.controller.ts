@@ -1,12 +1,14 @@
 import { Body, Controller, Post, UsePipes } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { OtpService } from './otp.service';
+import { SendOtpSchema, SendOtpInput, VerifyOtpSchema, VerifyOtpInput } from './otp.schema';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
 import { RegisterSchema, RegisterInput } from './register.schema';
 import { LoginSchema, LoginInput } from './login.schema';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private otpService: OtpService) {}
 
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
@@ -19,6 +21,27 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(LoginSchema))
   async login(@Body() body: LoginInput) {
     const res = await this.authService.validateCredentials(body);
+    return { body: res };
+  }
+
+  @Post('send-otp')
+  @UsePipes(new ZodValidationPipe(SendOtpSchema))
+  async sendOtp(@Body() body: SendOtpInput) {
+    const res = await this.otpService.sendOtp(body.rut);
+    return { body: res };
+  }
+
+  @Post('verify-otp')
+  @UsePipes(new ZodValidationPipe(VerifyOtpSchema))
+  async verifyOtp(@Body() body: VerifyOtpInput) {
+    const res = await this.otpService.verifyOtp(body.rut, body.otp);
+    return { body: res };
+  }
+
+  @Post('resend-otp')
+  @UsePipes(new ZodValidationPipe(SendOtpSchema))
+  async resendOtp(@Body() body: SendOtpInput) {
+    const res = await this.otpService.resendOtp(body.rut);
     return { body: res };
   }
 }

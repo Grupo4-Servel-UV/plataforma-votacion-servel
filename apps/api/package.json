@@ -5,6 +5,8 @@
     "scripts": {
         "dev": "cross-env NODE_DEV=development nest start --watch",
         "seed": "ts-node src/scripts/seed-votantes.ts",
+        "delete-votantes": "ts-node src/scripts/delete-votantes.ts",
+        "migrate": "ts-node src/scripts/run-migrations.ts",
         "debug": "cross-env NODE_DEV=development nest start --debug --watch",
         "build": "nest build",
         "start:prod": "cross-env NODE_DEV=production node dist/main",
@@ -25,7 +27,8 @@
         "rxjs": "^7.8.1",
         "typeorm": "^0.3.28",
         "zod": "^4.3.6",
-        "bcryptjs": "^2.4.3"
+        "bcryptjs": "^2.4.3",
+        "@sendgrid/mail": "^7.7.0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

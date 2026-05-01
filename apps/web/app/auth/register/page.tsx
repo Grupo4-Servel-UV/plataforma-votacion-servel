@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { DIVISION_TERRITORIAL } from '@servel/contracts'
 import Link from 'next/link'
 import { ServelHeader } from '@/components/layout/ServelHeader'
 import { API_BASE_URL } from '@/lib/config'
@@ -32,6 +33,10 @@ export default function RegisterPage() {
     if (form.fechaNacimiento && form.fechaNacimiento.length > 8) errs.fechaNacimiento = 'Fecha de nacimiento debe tener como máximo 8 caracteres (YYYYMMDD)'
 
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido'
+
+    // validar region/comuna si están presentes
+    if (form.region && !Object.keys(DIVISION_TERRITORIAL).includes(form.region)) errs.region = 'Región inválida'
+    if (form.comuna && form.region && !((DIVISION_TERRITORIAL[form.region] || []).includes(form.comuna))) errs.comuna = 'Comuna inválida para la región seleccionada'
 
     if (!form.clave || form.clave.length <= 6) errs.clave = 'La clave debe tener más de 6 caracteres'
 
@@ -92,8 +97,25 @@ export default function RegisterPage() {
               {fieldErrors.email && <div className="text-xs text-destructive mt-1">{fieldErrors.email}</div>}
               <input placeholder="Fecha nacimiento (YYYYMMDD)" value={form.fechaNacimiento} onChange={(e) => handleChange('fechaNacimiento', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
               {fieldErrors.fechaNacimiento && <div className="text-xs text-destructive mt-1">{fieldErrors.fechaNacimiento}</div>}
-              <input placeholder="Región" value={form.region} onChange={(e) => handleChange('region', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
-              <input placeholder="Comuna" value={form.comuna} onChange={(e) => handleChange('comuna', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
+              <div>
+                <input list="regions" placeholder="Región" value={form.region} onChange={(e) => { handleChange('region', e.target.value); handleChange('comuna', '') }} className="w-full rounded-lg border border-input px-3 py-2.5" />
+                <datalist id="regions">
+                  {Object.keys(DIVISION_TERRITORIAL).map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
+                {fieldErrors.region && <div className="text-xs text-destructive mt-1">{fieldErrors.region}</div>}
+              </div>
+
+              <div>
+                <input list="comunas" placeholder="Comuna" value={form.comuna} onChange={(e) => handleChange('comuna', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" disabled={!form.region} />
+                <datalist id="comunas">
+                  {(DIVISION_TERRITORIAL[form.region] || []).map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+                {fieldErrors.comuna && <div className="text-xs text-destructive mt-1">{fieldErrors.comuna}</div>}
+              </div>
               <select value={form.etnia ?? 'Ninguna'} onChange={(e) => handleChange('etnia', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5">
                 {ETNIAS.map((x) => <option key={x} value={x === 'Ninguna' ? 'Ninguna' : x}>{x}</option>)}
               </select>
