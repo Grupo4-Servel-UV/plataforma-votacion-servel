@@ -43,4 +43,13 @@ export class VotacionesController {
   ) {
     return this.votacionesService.checkEligibility(id, rut);
   }
+
+  @Post(':id/votar')
+  async votar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: any,
+  ) {
+    // body expected: { rut: string, payload: any }
+    return this.votacionesService.castVote(id, body.rut, body.payload);
+  }
 }

@@ -85,6 +85,20 @@ export default function AuthPage() {
           setErr1('No estás habilitado en el padrón. Contacta a la autoridad.')
           return
         }
+
+        // If the server reports the user already voted, notify and redirect
+        if (
+          payload.alreadyVoted ||
+          payload.votado ||
+          payload.yaVoto ||
+          payload.ya_voto ||
+          payload.already_voted
+        ) {
+          setErr1('Ya ejerciste tu voto en esta votación. Redirigiendo...')
+          setTimeout(() => router.push('/'), 3000)
+          return
+        }
+
         // capture email to show masked contact in OTP step
         setContactEmail(payload.email ?? null)
 
@@ -131,6 +145,12 @@ export default function AuthPage() {
         const data = await res.json().catch(() => ({}))
         const body = data.body ?? data
         if (res.ok && body.ok) {
+          try {
+            // persist normalized rut for this voting session (ephemeral)
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('votante_rut', rut)
+            }
+          } catch (e) {}
           router.push(`/votar/${id}`)
           return
         }
