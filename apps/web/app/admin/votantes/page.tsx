@@ -157,7 +157,13 @@ export default function VotantesPage() {
                   </select>
                 </td>
                 <td className="py-2 w-24 pr-4">
-                  <button onClick={() => handleDelete(v.rut)} className="text-sm text-destructive">Borrar</button>
+                  <button
+                    onClick={() => handleDelete(v.rut)}
+                    className="text-sm text-destructive hover:underline"
+                    aria-label={`Eliminar votante ${v.rut}`}
+                  >
+                    Eliminar
+                  </button>
                 </td>
               </tr>
             ))}
