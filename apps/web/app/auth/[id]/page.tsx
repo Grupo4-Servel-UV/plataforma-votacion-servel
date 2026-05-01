@@ -52,8 +52,40 @@ export default function AuthPage() {
       return
     }
     setErr1(null)
-    setStep(2)
-    setSecondsLeft(300)
+
+    // Verificar credenciales en la API y comprobar habilitación en el padrón
+    ;(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rut, clave: pwd }),
+        })
+
+        if (res.status === 401) {
+          setErr1('RUT o clave inválidos')
+          return
+        }
+
+        if (!res.ok) {
+          setErr1('Error al verificar credenciales')
+          return
+        }
+
+        const data = await res.json()
+        const payload = data.body ?? data
+
+        if (!payload.habilitado) {
+          setErr1('No estás habilitado en el padrón. Contacta a la autoridad.')
+          return
+        }
+
+        setStep(2)
+        setSecondsLeft(300)
+      } catch (err) {
+        setErr1('Error de conexión con el servidor')
+      }
+    })()
   }
 
   const handleOtp = (code: string) => {

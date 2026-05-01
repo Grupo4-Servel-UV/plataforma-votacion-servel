@@ -4,6 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "cross-env NODE_DEV=development nest start --watch",
+        "seed": "ts-node src/scripts/seed-votantes.ts",
         "debug": "cross-env NODE_DEV=development nest start --debug --watch",
         "build": "nest build",
         "start:prod": "cross-env NODE_DEV=production node dist/main",
@@ -23,7 +24,8 @@
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.1",
         "typeorm": "^0.3.28",
-        "zod": "^4.3.6"
+        "zod": "^4.3.6",
+        "bcryptjs": "^2.4.3"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -36,5 +38,6 @@
         "eslint-plugin-prettier": "^5.5.5",
         "globals": "^17.5.0",
         "typescript-eslint": "^8.59.0"
+        ,"ts-node": "^10.9.1"
     }
 }

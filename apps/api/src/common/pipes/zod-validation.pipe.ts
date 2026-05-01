@@ -1,5 +1,5 @@
 import { ArgumentMetadata, BadRequestException, PipeTransform } from '@nestjs/common';
-import { ZodType } from 'zod';
+import { ZodType, ZodError } from 'zod';
 
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: ZodType) {}
@@ -8,7 +8,11 @@ export class ZodValidationPipe implements PipeTransform {
     try {
       return this.schema.parse(value);
     } catch (error) {
-      throw new BadRequestException('Fallo de validación de contrato', { cause: error });
+      if (error instanceof ZodError) {
+        // Return structured validation errors in the response body (helpful for development)
+        throw new BadRequestException({ message: 'Fallo de validación de contrato', issues: error.issues });
+      }
+      throw new BadRequestException('Fallo de validación de contrato');
     }
   }
 }
