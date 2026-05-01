@@ -17,6 +17,12 @@ export class AuthService {
     const normalized = this.normalizeRut(input.rut);
     const existing = await this.votanteRepo.findOneBy({ rut: normalized });
     if (existing) throw new BadRequestException('RUT ya registrado');
+    // Check email uniqueness when provided
+    const email = (input as any).email ?? null;
+    if (email) {
+      const existsEmail = await this.votanteRepo.findOneBy({ email });
+      if (existsEmail) throw new BadRequestException('Email ya registrado');
+    }
 
     const hash = await bcrypt.hash(input.clave, 10);
 
@@ -24,6 +30,7 @@ export class AuthService {
       nombres: input.nombres,
       apellidos: input.apellidos,
       rut: normalized,
+      email: (input as any).email ?? null,
       fechaNacimiento: input.fechaNacimiento ?? null,
       comunidadIndigena: input.comunidadIndigena ?? null,
       region: input.region ?? null,

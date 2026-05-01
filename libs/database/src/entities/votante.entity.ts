@@ -19,6 +19,10 @@ export class VotanteEntity {
   apellidos!: string;
 
   @Index({ unique: true })
+  @Column({ length: 255, nullable: true })
+  email!: string | null;
+
+  @Index({ unique: true })
   @Column({ length: 12 })
   rut!: string;
 

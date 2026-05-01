@@ -9,6 +9,7 @@ export default function RegisterPage() {
     nombres: '',
     apellidos: '',
     rut: '',
+    email: '',
     fechaNacimiento: '',
     region: '',
     comuna: '',
@@ -29,6 +30,8 @@ export default function RegisterPage() {
     else if (rutClean.length > 10) errs.rut = 'RUT no puede ser mayor a 10 caracteres'
 
     if (form.fechaNacimiento && form.fechaNacimiento.length > 8) errs.fechaNacimiento = 'Fecha de nacimiento debe tener como máximo 8 caracteres (YYYYMMDD)'
+
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido'
 
     if (!form.clave || form.clave.length <= 6) errs.clave = 'La clave debe tener más de 6 caracteres'
 
@@ -64,7 +67,7 @@ export default function RegisterPage() {
         return
       }
       setSuccess('Registrado correctamente. Ahora puedes iniciar sesión con tu RUT y clave.')
-      setForm({ nombres: '', apellidos: '', rut: '', fechaNacimiento: '', region: '', comuna: '', clave: '' })
+      setForm({ nombres: '', apellidos: '', rut: '', email: '', fechaNacimiento: '', region: '', comuna: '', clave: '' })
       setFieldErrors({})
     } catch (err) {
       setErr('Error de conexión')
@@ -85,6 +88,8 @@ export default function RegisterPage() {
               <input placeholder="Apellidos" value={form.apellidos} onChange={(e) => handleChange('apellidos', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
               <input placeholder="RUT (ej. 12345678-9)" value={form.rut} onChange={(e) => handleChange('rut', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
               {fieldErrors.rut && <div className="text-xs text-destructive mt-1">{fieldErrors.rut}</div>}
+              <input placeholder="Correo electrónico" value={form.email} onChange={(e) => handleChange('email', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
+              {fieldErrors.email && <div className="text-xs text-destructive mt-1">{fieldErrors.email}</div>}
               <input placeholder="Fecha nacimiento (YYYYMMDD)" value={form.fechaNacimiento} onChange={(e) => handleChange('fechaNacimiento', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
               {fieldErrors.fechaNacimiento && <div className="text-xs text-destructive mt-1">{fieldErrors.fechaNacimiento}</div>}
               <input placeholder="Región" value={form.region} onChange={(e) => handleChange('region', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />

@@ -8,6 +8,7 @@ export const RegisterSchema = z.object({
   comunidadIndigena: z.string().optional().nullable(),
   region: z.string().optional().nullable(),
   comuna: z.string().optional().nullable(),
+  email: z.string().email().max(255),
   etnia: z.enum([
     'Aimara', 'Atacameño', 'Quechua', 'Diaguita', 'Colla', 'Chango', 'Mapuche', 'Rapa Nui', 'Kawésqar', 'Yagán', "Selk'nam", 'Ninguna',
   ]).optional().nullable(),

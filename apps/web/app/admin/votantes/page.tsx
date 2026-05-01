@@ -13,11 +13,13 @@ type Votante = {
   comuna?: string | null
   habilitado?: boolean
   etnia?: string | null
+  email?: string | null
 }
 
 export default function VotantesPage() {
   const [list, setList] = useState<Votante[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [expandedEmails, setExpandedEmails] = useState<string[]>([])
 
   const fetchList = async () => {
     try {
@@ -65,34 +67,57 @@ export default function VotantesPage() {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen py-6">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold">Votantes (Desarrollo)</h1>
           <Link href="/auth/register" className="text-sm text-primary">Crear votante</Link>
         </div>
         {error && <div className="mb-3 text-destructive">{error}</div>}
 
-        <table className="w-full table-auto border-collapse">
+        <div className="overflow-x-auto">
+          <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="text-left text-sm text-muted-foreground">
-              <th className="pb-2">RUT</th>
-              <th className="pb-2">Nombre</th>
-              <th className="pb-2">Región</th>
-              <th className="pb-2">Comuna</th>
-              <th className="pb-2">Habilitado</th>
-              <th className="pb-2">Etnia</th>
-              <th className="pb-2">Acciones</th>
+              <th className="pb-2 w-36">RUT</th>
+              <th className="pb-2 w-48">Nombre</th>
+              <th className="pb-2 w-24">Región</th>
+              <th className="pb-2 w-24">Comuna</th>
+              <th className="pb-2 w-80">Correo</th>
+              <th className="pb-2 w-28">Habilitado</th>
+              <th className="pb-2 w-40">Etnia</th>
+              <th className="pb-2 w-24 pr-4">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {list.map((v) => (
               <tr key={v.id} className="border-t">
-                <td className="py-2">{v.rut}</td>
-                <td className="py-2">{v.nombres} {v.apellidos}</td>
-                <td className="py-2">{v.region}</td>
-                <td className="py-2">{v.comuna}</td>
-                <td className="py-2">
+                <td className="py-2 w-36">{v.rut}</td>
+                <td className="py-2 w-48">{v.nombres} {v.apellidos}</td>
+                <td className="py-2 w-24">{v.region}</td>
+                <td className="py-2 w-24">{v.comuna}</td>
+                <td className="py-2 max-w-[20rem]">
+                  {(() => {
+                    const email = v.email ?? ''
+                    const expanded = expandedEmails.includes(v.id)
+                    const short = email.length > 6 ? `${email.slice(0, 6)}...` : email
+                    return (
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setExpandedEmails((s) => s.includes(v.id) ? s.filter(x => x !== v.id) : [...s, v.id])}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setExpandedEmails((s) => s.includes(v.id) ? s.filter(x => x !== v.id) : [...s, v.id]) }}
+                        className="inline-flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-muted/10 transition-colors"
+                        aria-label={expanded ? `Contraer email ${email}` : `Ver email completo ${email}`}
+                        title={expanded ? '' : email}
+                      >
+                        <span className="text-sm font-mono text-foreground">{expanded ? email : short}</span>
+                        <span className={`text-xs text-muted-foreground transform transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}>▸</span>
+                      </div>
+                    )
+                  })()}
+                </td>
+                <td className="py-2 w-28">
                   <select
                     value={v.habilitado ? 'true' : 'false'}
                     onChange={(e) => setHabilitado(v.rut, e.target.value === 'true')}
@@ -103,7 +128,7 @@ export default function VotantesPage() {
                     <option value="false">NO</option>
                   </select>
                 </td>
-                <td className="py-2">
+                <td className="py-2 w-40">
                   <select
                     value={v.etnia ?? 'Ninguna'}
                     onChange={(e) => {
@@ -131,13 +156,14 @@ export default function VotantesPage() {
                     <option value="Selk'nam">Selk'nam</option>
                   </select>
                 </td>
-                <td className="py-2">
+                <td className="py-2 w-24 pr-4">
                   <button onClick={() => handleDelete(v.rut)} className="text-sm text-destructive">Borrar</button>
                 </td>
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   )
