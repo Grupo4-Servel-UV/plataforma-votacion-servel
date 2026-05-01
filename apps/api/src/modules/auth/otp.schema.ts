@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const SendOtpSchema = z.object({
   rut: z.string().min(5),
+  votacionId: z.string().uuid().optional(),
 });
 export type SendOtpInput = z.infer<typeof SendOtpSchema>;
 

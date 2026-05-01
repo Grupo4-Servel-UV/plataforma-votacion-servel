@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
-import { CandidatoEntity, VotacionEntity } from '@servel/database';
+import { CandidatoEntity, VotacionEntity, VotanteEntity } from '@servel/database';
 import { DataSource, In, Repository } from 'typeorm';
 
 @Injectable()
@@ -11,6 +11,8 @@ export class VotacionesService {
     private readonly votacionRepo: Repository<VotacionEntity>,
     @InjectRepository(CandidatoEntity)
     private readonly candidatoRepo: Repository<CandidatoEntity>,
+    @InjectRepository(VotanteEntity)
+    private readonly votanteRepo: Repository<VotanteEntity>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -99,9 +101,52 @@ export class VotacionesService {
   async findOne(id: string) {
     const votacion = await this.votacionRepo.findOne({
       where: { id },
-      relations: ['candidatos'],
+      relations: ['candidatos', 'comunidades'],
     });
     if (!votacion) throw new NotFoundException('Votación no encontrada');
     return votacion;
+  }
+
+  async checkEligibility(votacionId: string, rut: string) {
+    const votacion = await this.votacionRepo.findOne({
+      where: { id: votacionId },
+      relations: ['comunidades'],
+    });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+
+    const clean = String(rut).replace(/\.|-|\s/g, '');
+    const votante = await this.votanteRepo
+      .createQueryBuilder('v')
+      .where("replace(replace(v.rut, '.', ''), '-', '') = :clean", { clean })
+      .getOne();
+
+    if (!votante) return { eligible: false, reasons: ['Votante no registrado'] };
+
+    const reasons: string[] = [];
+
+    if (votacion.region) {
+      if (!votante.region || votante.region !== votacion.region) {
+        reasons.push('Región no coincide');
+      }
+    }
+
+    if (votacion.comuna) {
+      if (!votante.comuna || votante.comuna !== votacion.comuna) {
+        reasons.push('Comuna no coincide');
+      }
+    }
+
+    const comunidades = (votacion as any).comunidades ?? [];
+    if (Array.isArray(comunidades) && comunidades.length > 0) {
+      const nombres = comunidades.map((c: any) => c.comunidad);
+      const match =
+        (votante.comunidadIndigena && nombres.includes(votante.comunidadIndigena)) ||
+        (votante.etnia && nombres.includes(votante.etnia));
+      if (!match) {
+        reasons.push('No pertenece a la(s) comunidad(es) requeridas');
+      }
+    }
+
+    return { eligible: reasons.length === 0, reasons };
   }
 }

@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, Post, UsePipes, ForbiddenException } from '@nestjs/common';
+import { VotacionesService } from '../votaciones/votaciones.service';
 import { AuthService } from './auth.service';
 import { OtpService } from './otp.service';
 import { SendOtpSchema, SendOtpInput, VerifyOtpSchema, VerifyOtpInput } from './otp.schema';
@@ -8,7 +9,11 @@ import { LoginSchema, LoginInput } from './login.schema';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private authService: AuthService, private otpService: OtpService) {}
+  constructor(
+    private authService: AuthService,
+    private otpService: OtpService,
+    private votacionesService: VotacionesService,
+  ) {}
 
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
@@ -27,6 +32,13 @@ export class AuthController {
   @Post('send-otp')
   @UsePipes(new ZodValidationPipe(SendOtpSchema))
   async sendOtp(@Body() body: SendOtpInput) {
+    if (body.votacionId) {
+      const check = await this.votacionesService.checkEligibility(body.votacionId, body.rut);
+      if (!check || !check.eligible) {
+        throw new ForbiddenException({ message: 'Votante no elegible para esta votación', reasons: check?.reasons ?? [] });
+      }
+    }
+
     const res = await this.otpService.sendOtp(body.rut);
     return { body: res };
   }

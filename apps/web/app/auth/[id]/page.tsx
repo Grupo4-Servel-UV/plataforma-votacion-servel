@@ -11,13 +11,15 @@ import { toElectionView } from '@/lib/adapters'
 import { formatRut } from '@/lib/mockData'
 
 export default function AuthPage() {
-  const { id } = useParams<{ id: string }>()
+  const params = useParams()
+  const id = String(params.id)
   const router = useRouter()
   const [election, setElection] = useState<ReturnType<typeof toElectionView> | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
   const [rut, setRut] = useState('')
   const [pwd, setPwd] = useState('')
   const [err1, setErr1] = useState<string | null>(null)
+  const [notEligibleReasons, setNotEligibleReasons] = useState<string[] | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(300)
   const [attempts, setAttempts] = useState(3)
   const [otpError, setOtpError] = useState(false)
@@ -59,8 +61,8 @@ export default function AuthPage() {
 
     // Verificar credenciales en la API y comprobar habilitación en el padrón
     ;(async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rut, clave: pwd }),
@@ -95,10 +97,14 @@ export default function AuthPage() {
           const send = await fetch(`${API_BASE_URL}/auth/send-otp`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rut }),
+            body: JSON.stringify({ rut, votacionId: id }),
           })
           if (!send.ok) {
             const body = await send.json().catch(() => ({}))
+            if (send.status === 403) {
+              setNotEligibleReasons(body.reasons ?? [body.message ?? 'No elegible'])
+              return
+            }
             setErr1(body.message ?? 'Error al enviar el código de verificación')
             setStep(1)
             return
@@ -164,6 +170,21 @@ export default function AuthPage() {
           </Link>
 
           <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+            {notEligibleReasons ? (
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold text-foreground">No estás habilitado para esta votación</h2>
+                <p className="text-sm text-muted-foreground">Motivos:</p>
+                <ul className="list-disc list-inside text-sm text-foreground">
+                  {notEligibleReasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+                <div className="pt-4">
+                  <Link href="/" className="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm">Volver</Link>
+                </div>
+              </div>
+            ) : (
+            <div>
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                 {step === 1 ? <KeyRound className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
@@ -251,10 +272,14 @@ export default function AuthPage() {
                         const r = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ rut }),
+                          body: JSON.stringify({ rut, votacionId: id }),
                         })
                         if (!r.ok) {
                           const b = await r.json().catch(() => ({}))
+                          if (r.status === 403) {
+                            setNotEligibleReasons(b.reasons ?? [b.message ?? 'No elegible'])
+                            return
+                          }
                           setOtpMessage(b.message ?? 'Error al reenviar código')
                           return
                         }
@@ -271,6 +296,8 @@ export default function AuthPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
+            )}
           </div>
         </div>
       </main>
