@@ -1,11 +1,11 @@
-import { Body, Controller, Post, UsePipes, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, UsePipes } from '@nestjs/common';
+import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
 import { VotacionesService } from '../votaciones/votaciones.service';
 import { AuthService } from './auth.service';
+import { LoginInput, LoginSchema } from './login.schema';
+import { SendOtpInput, SendOtpSchema, VerifyOtpInput, VerifyOtpSchema } from './otp.schema';
 import { OtpService } from './otp.service';
-import { SendOtpSchema, SendOtpInput, VerifyOtpSchema, VerifyOtpInput } from './otp.schema';
-import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
-import { RegisterSchema, RegisterInput } from './register.schema';
-import { LoginSchema, LoginInput } from './login.schema';
+import { RegisterInput, RegisterSchema } from './register.schema';
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -54,6 +54,18 @@ export class AuthController {
   @UsePipes(new ZodValidationPipe(SendOtpSchema))
   async resendOtp(@Body() body: SendOtpInput) {
     const res = await this.otpService.resendOtp(body.rut);
+    return { body: res };
+  }
+
+  @Post('request-password-reset')
+  async requestPasswordReset(@Body() body: { rut: string }) {
+    const res = await this.authService.requestPasswordReset(body.rut);
+    return { body: res };
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() body: { rut: string; token: string; newPassword: string }) {
+    const res = await this.authService.resetPassword(body.rut, body.token, body.newPassword);
     return { body: res };
   }
 }

@@ -1,14 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ShieldCheck, KeyRound } from 'lucide-react'
-import Link from 'next/link'
-import { ServelHeader } from '@/components/layout/ServelHeader'
 import { OTPInput } from '@/components/auth/OTPInput'
-import { API_BASE_URL } from '@/lib/config'
 import { toElectionView } from '@/lib/adapters'
+import { API_BASE_URL } from '@/lib/config'
 import { formatRut } from '@/lib/mockData'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function AuthPage() {
   const params = useParams()
@@ -18,6 +17,7 @@ export default function AuthPage() {
   const [step, setStep] = useState<1 | 2>(1)
   const [rut, setRut] = useState('')
   const [pwd, setPwd] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [err1, setErr1] = useState<string | null>(null)
   const [notEligibleReasons, setNotEligibleReasons] = useState<string[] | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(300)
@@ -25,6 +25,9 @@ export default function AuthPage() {
   const [otpError, setOtpError] = useState(false)
   const [otpMessage, setOtpMessage] = useState<string | null>(null)
   const [contactEmail, setContactEmail] = useState<string | null>(null)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
   const MAX_ATTEMPTS = 3
   const OTP_TTL = 300
 
@@ -182,7 +185,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <ServelHeader />
       <main className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">
@@ -241,13 +243,23 @@ export default function AuthPage() {
                     />
                   </Field>
                   <Field label="Clave Única">
-                    <input
-                      type="password"
-                      value={pwd}
-                      onChange={(e) => setPwd(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={pwd}
+                        onChange={(e) => setPwd(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full rounded-lg border border-input bg-card px-3 py-2.5 text-foreground outline-none focus:border-primary focus:ring-4 focus:ring-primary/15"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        onClick={() => setShowPassword((s) => !s)}
+                        className="absolute inset-y-0 right-2 flex items-center pr-1"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </button>
+                    </div>
                   </Field>
 
                   {err1 && (
@@ -262,6 +274,45 @@ export default function AuthPage() {
                   <p className="text-[11px] text-center text-muted-foreground">
                     Tus credenciales son verificadas con el sistema oficial de Clave Única del Estado.
                   </p>
+                  <div className="text-center mt-3">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault()
+                        setResetError(null)
+                        setResetMessage(null)
+                        const cleanRut = rut || ''
+                        if (cleanRut.replace(/[^0-9kK]/g, '').length < 7) {
+                          setResetError('Ingresa un RUT válido para solicitar el restablecimiento')
+                          return
+                        }
+                        setResetLoading(true)
+                        try {
+                          const r = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rut: cleanRut }),
+                          })
+                          const b = await r.json().catch(() => ({}))
+                          if (!r.ok) {
+                            setResetError(b.message ?? 'Error al solicitar restablecimiento')
+                          } else {
+                            setResetMessage('Si el RUT tiene email registrado, recibirás un enlace para restablecer la contraseña.')
+                          }
+                        } catch (err) {
+                          setResetError('Error de conexión al solicitar restablecimiento')
+                        } finally {
+                          setResetLoading(false)
+                        }
+                      }}
+                      disabled={resetLoading}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {resetLoading ? 'Enviando...' : '¿Olvidaste tu contraseña? Restablecer contraseña'}
+                    </button>
+                    {resetError && <div className="text-xs text-destructive mt-2">{resetError}</div>}
+                    {resetMessage && <div className="text-xs text-muted-foreground mt-2">{resetMessage}</div>}
+                  </div>
                 </motion.form>
               ) : (
                 <motion.div

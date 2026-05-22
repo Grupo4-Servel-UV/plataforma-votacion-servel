@@ -41,4 +41,14 @@ export class EmailService {
     const html = `<p>Tu código OTP es: <strong>${otp}</strong></p><p>Expira en ${process.env.OTP_TTL_MINUTES ?? 5} minutos.</p>`;
     await client.send({ to, from, subject, text, html });
   }
+
+  async sendPasswordReset(to: string, link: string) {
+    const client = await this.ensureClient();
+    if (!client) throw new Error('@sendgrid/mail not installed or configured');
+    const from = process.env.EMAIL_FROM ?? 'no-reply@example.com';
+    const subject = 'Restablecer contraseña';
+    const text = `Solicitaste restablecer tu contraseña. Usa este enlace: ${link} (expira pronto).`;
+    const html = `<p>Solicitaste restablecer tu contraseña. Haz click en el siguiente enlace para establecer una nueva contraseña:</p><p><a href="${link}">${link}</a></p><p>Si no solicitaste esto, ignora este correo.</p>`;
+    await client.send({ to, from, subject, text, html });
+  }
 }

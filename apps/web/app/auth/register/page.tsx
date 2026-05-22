@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
-import { DIVISION_TERRITORIAL } from '@servel/contracts'
-import Link from 'next/link'
-import { ServelHeader } from '@/components/layout/ServelHeader'
 import { API_BASE_URL } from '@/lib/config'
+import { DIVISION_TERRITORIAL } from '@servel/contracts'
+import { Eye, EyeOff } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -14,11 +14,13 @@ export default function RegisterPage() {
     fechaNacimiento: '',
     region: '',
     comuna: '',
+    etnia: '',
     clave: '',
   })
   const [err, setErr] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({})
   const [success, setSuccess] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (k: string, v: string) => setForm((s) => ({ ...s, [k]: v }))
 
@@ -72,7 +74,7 @@ export default function RegisterPage() {
         return
       }
       setSuccess('Registrado correctamente. Ahora puedes iniciar sesión con tu RUT y clave.')
-      setForm({ nombres: '', apellidos: '', rut: '', email: '', fechaNacimiento: '', region: '', comuna: '', clave: '' })
+      setForm({ nombres: '', apellidos: '', rut: '', email: '', fechaNacimiento: '', region: '', comuna: '', etnia: '', clave: '' })
       setFieldErrors({})
     } catch (err) {
       setErr('Error de conexión')
@@ -81,7 +83,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <ServelHeader />
       <main className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">Volver</Link>
@@ -119,7 +120,23 @@ export default function RegisterPage() {
               <select value={form.etnia ?? 'Ninguna'} onChange={(e) => handleChange('etnia', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5">
                 {ETNIAS.map((x) => <option key={x} value={x === 'Ninguna' ? 'Ninguna' : x}>{x}</option>)}
               </select>
-              <input placeholder="Clave" type="password" value={form.clave} onChange={(e) => handleChange('clave', e.target.value)} className="w-full rounded-lg border border-input px-3 py-2.5" />
+              <div className="relative">
+                <input
+                  placeholder="Clave"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.clave}
+                  onChange={(e) => handleChange('clave', e.target.value)}
+                  className="w-full rounded-lg border border-input px-3 py-2.5"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute inset-y-0 right-2 flex items-center pr-1"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                </button>
+              </div>
               {fieldErrors.clave && <div className="text-xs text-destructive mt-1">{fieldErrors.clave}</div>}
 
               {err && <div className="text-sm text-destructive">{err}</div>}

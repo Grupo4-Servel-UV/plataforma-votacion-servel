@@ -1,6 +1,6 @@
 'use client'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export function ServelHeader() {
   return (
@@ -20,7 +20,7 @@ export function ServelHeader() {
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Inicio</Link>
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Procesos electorales</Link>
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Resultados</Link>
-        <Link href="/votaciones" className="opacity-80 hover:opacity-100 transition-opacity">Administración</Link>
+        <Link href="/votaciones" className="opacity-80 hover:opacity-100 transition-opacity">Administración Votaciones</Link>
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Ayuda</Link>
       </nav>
       </div>
