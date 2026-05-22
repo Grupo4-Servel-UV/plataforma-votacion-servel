@@ -1,10 +1,13 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { VotanteEntity } from '@servel/database';
-import { RegisterInput } from './register.schema';
-import { LoginInput } from './login.schema';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+import { parse } from 'csv-parse/sync';
+import * as path from 'path';
+import { Repository } from 'typeorm';
+import { LoginInput } from './login.schema';
+import { RegisterInput } from './register.schema';
 
 @Injectable()
 export class AuthService {
@@ -114,6 +117,204 @@ export class AuthService {
     await this.votanteRepo.save(votante);
     const { claveHash, ...rest } = votante as any;
     return rest as Partial<VotanteEntity>;
+  }
+
+  // Validate an uploaded padrón file (CSV or JSON). Does not modify the DB.
+  async validatePadronFile(file: Express.Multer.File) {
+    const filename = file?.originalname ?? 'file';
+    const ext = path.extname(filename || '').toLowerCase();
+    let records: any[] = [];
+
+    // parse JSON
+    if (ext === '.json' || file.mimetype === 'application/json') {
+      try {
+        const parsed = JSON.parse(file.buffer.toString('utf8'));
+        if (!Array.isArray(parsed)) throw new BadRequestException('JSON debe ser un arreglo de objetos');
+        records = parsed;
+      } catch (err: any) {
+        throw new BadRequestException('Error parseando JSON: ' + (err?.message ?? String(err)));
+      }
+    } else {
+      // parse CSV
+      try {
+        const txt = file.buffer.toString('utf8');
+        records = parse(txt, { columns: true, skip_empty_lines: true, trim: true });
+      } catch (err: any) {
+        throw new BadRequestException('Error parseando CSV: ' + (err?.message ?? String(err)));
+      }
+    }
+
+    const errors: Array<{ row: number; field?: string; message: string; details?: any }> = [];
+    const seen = new Map<string, number>();
+    const requiredFields = ['rut', 'region', 'comuna', 'estado_habilitacion', 'email'];
+
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i] ?? {};
+      const rowNum = i + 1;
+
+      // Check required fields (supporting email header as `email` or `correo`)
+      for (const f of requiredFields) {
+        if (f === 'email') {
+          const val = row['email'] ?? row['correo'] ?? row['mail'] ?? row['correo_electronico'];
+          if (val === undefined || val === null || String(val).trim() === '') {
+            errors.push({ row: rowNum, field: 'email', message: 'Campo obligatorio faltante' });
+          }
+        } else {
+          if (row[f] === undefined || row[f] === null || String(row[f]).trim() === '') {
+            errors.push({ row: rowNum, field: f, message: 'Campo obligatorio faltante' });
+          }
+        }
+      }
+
+      // Validate RUT format
+      const rawRut = row['rut'];
+      if (rawRut) {
+        const clean = String(rawRut).replace(/[\.\-\s]/g, '');
+        const m = clean.match(/^(\d{7,8})([0-9Kk])$/);
+        if (!m) {
+          errors.push({ row: rowNum, field: 'rut', message: 'RUT inválido' });
+        }
+
+        const normalized = this.normalizeRut(String(rawRut));
+        if (seen.has(normalized)) {
+          errors.push({ row: rowNum, field: 'rut', message: 'Duplicado en archivo (mismo RUT aparece varias veces)', details: { firstRow: seen.get(normalized) } });
+        } else {
+          seen.set(normalized, rowNum);
+        }
+      }
+
+      // Validate estado_habilitacion
+      const estadoRaw = row['estado_habilitacion'];
+      const estadoStr = estadoRaw === undefined || estadoRaw === null ? '' : String(estadoRaw).trim().toLowerCase();
+      if (estadoStr === '') {
+        // already reported as missing above
+      } else if (!['habilitado', 'inhabilitado', 'true', 'false', '1', '0'].includes(estadoStr)) {
+        errors.push({ row: rowNum, field: 'estado_habilitacion', message: 'Valor inválido. Use "habilitado" o "inhabilitado"' });
+      }
+
+      // Validate email format and length (accept headers `email` or `correo`)
+      const rawEmail = row['email'] ?? row['correo'] ?? row['mail'] ?? row['correo_electronico'];
+      if (rawEmail) {
+        const emailStr = String(rawEmail).trim();
+        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr) && emailStr.length <= 255;
+        if (!emailOk) {
+          errors.push({ row: rowNum, field: 'email', message: 'Email inválido o demasiado largo (máx 255 chars)' });
+        }
+      }
+
+      // region/comuna already checked for emptiness above
+    }
+
+    // detect duplicate emails within the file
+    const emailSeen = new Map<string, number>();
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i] ?? {};
+      const rowNum = i + 1;
+      const rawEmail = row['email'] ?? row['correo'] ?? row['mail'] ?? row['correo_electronico'];
+      if (rawEmail) {
+        const emailNorm = String(rawEmail).trim().toLowerCase();
+        if (emailSeen.has(emailNorm)) {
+          errors.push({ row: rowNum, field: 'email', message: 'Email duplicado en archivo', details: { firstRow: emailSeen.get(emailNorm) } });
+        } else {
+          emailSeen.set(emailNorm, rowNum);
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new BadRequestException({ errors });
+    }
+
+    return { ok: true, total: records.length, records };
+  }
+
+  // Import and upsert padrón records into DB. Atomic transaction: either all rows applied or none.
+  async importPadronFile(file: Express.Multer.File) {
+    const parsed = await this.validatePadronFile(file) as any;
+    const records: any[] = parsed.records ?? [];
+
+    let added = 0;
+    let updated = 0;
+
+    try {
+      await this.votanteRepo.manager.transaction(async (em) => {
+        for (let i = 0; i < records.length; i++) {
+          const row = records[i] ?? {};
+          const rowNum = i + 1;
+
+          const rawRut = row['rut'];
+          const normalizedRut = this.normalizeRut(String(rawRut));
+
+          const rawEmail = row['email'] ?? row['correo'] ?? row['mail'] ?? row['correo_electronico'];
+          const email = rawEmail ? String(rawEmail).trim().toLowerCase() : null;
+
+          const nombres = row['nombres'] ?? row['nombre'] ?? null;
+          const apellidos = row['apellidos'] ?? row['apellido'] ?? null;
+          const fechaNacimiento = row['fecha_nacimiento'] ?? row['fechaNacimiento'] ?? null;
+          const comunidad = row['comunidad_indigena'] ?? row['comunidadIndigena'] ?? row['comunidad'] ?? null;
+          const region = row['region'] ?? null;
+          const comuna = row['comuna'] ?? null;
+          const etnia = row['etnia'] ?? null;
+
+          const estadoRaw = row['estado_habilitacion'];
+          const estadoStr = estadoRaw === undefined || estadoRaw === null ? '' : String(estadoRaw).trim().toLowerCase();
+          const habilitado = ['habilitado', 'true', '1'].includes(estadoStr);
+
+          // check for email conflict with another existing votante
+          if (email) {
+            const byEmail = await em.findOne(VotanteEntity, { where: { email } });
+            if (byEmail && byEmail.rut !== normalizedRut) {
+              throw new BadRequestException({ errors: [{ row: rowNum, field: 'email', message: 'Email ya asociado a otro RUT' }] });
+            }
+          }
+
+          // find existing by normalized rut
+          let existing = await em.findOne(VotanteEntity, { where: { rut: normalizedRut } });
+
+          if (existing) {
+            existing.nombres = nombres ?? existing.nombres;
+            existing.apellidos = apellidos ?? existing.apellidos;
+            existing.email = email ?? existing.email;
+            existing.fechaNacimiento = fechaNacimiento ?? existing.fechaNacimiento;
+            existing.comunidadIndigena = comunidad ?? existing.comunidadIndigena;
+            existing.region = region ?? existing.region;
+            existing.comuna = comuna ?? existing.comuna;
+            existing.etnia = etnia ?? existing.etnia;
+            existing.habilitado = habilitado;
+
+            await em.save(existing);
+            updated++;
+          } else {
+            const randomSecret = crypto.randomBytes(16).toString('hex');
+            const hash = await bcrypt.hash(randomSecret, 10);
+
+            const toCreate = em.create(VotanteEntity, {
+              nombres: nombres ?? '',
+              apellidos: apellidos ?? '',
+              rut: normalizedRut,
+              email: email ?? null,
+              fechaNacimiento: fechaNacimiento ?? null,
+              comunidadIndigena: comunidad ?? null,
+              region: region ?? null,
+              comuna: comuna ?? null,
+              etnia: etnia ?? null,
+              claveHash: hash,
+              habilitado,
+            });
+
+            await em.save(toCreate);
+            added++;
+          }
+        }
+      });
+    } catch (err: any) {
+      // rethrow known BadRequestException from validation/conflicts
+      if (err instanceof BadRequestException) throw err;
+      // wrap other errors
+      throw new BadRequestException('Error al importar padrón: ' + (err?.message ?? String(err)));
+    }
+
+    return { ok: true, total: records.length, added, updated };
   }
 
   // Normalize RUT to format XX.XXX.XXX-X or X.XXX.XXX-X when possible.

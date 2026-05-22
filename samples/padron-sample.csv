@@ -1,0 +1,5 @@
+rut,nombres,apellidos,email,region,comuna,estado_habilitacion,fecha_nacimiento,comunidad_indigena,etnia
+12.345.678-5,Juan,Pérez,juan.perez@example.com,Región Metropolitana,Santiago,habilitado,19800101,,Mapuche
+8.765.432-k,María,Gómez,maria.gomez@example.com,Valparaíso,Valparaíso,inhabilitado,19901231,ComunidadX,
+1.234.567-9,Carlos,Soto,carlos.soto@example.com,Biobío,Concepción,1,19750505,,
+9.876.543-2,Ana,López,ana.lopez@example.com,La Araucanía,Temuco,true,19881120,,

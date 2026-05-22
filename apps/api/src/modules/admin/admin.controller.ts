@@ -1,4 +1,6 @@
-import { Controller, Param, Put, Get, Delete, Body } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { AuthService } from '../auth/auth.service';
 
 @Controller({ path: 'admin', version: '1' })
@@ -32,6 +34,14 @@ export class AdminController {
   @Delete('votantes/:rut')
   async remove(@Param('rut') rut: string) {
     const res = await this.authService.deleteVotante(rut);
+    return { body: res };
+  }
+
+  @Post('padron/upload')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
+  async uploadPadron(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Archivo no recibido');
+    const res = await this.authService.importPadronFile(file);
     return { body: res };
   }
 }
