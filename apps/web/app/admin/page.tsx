@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, FileBarChart, Users, Upload, UserCog, ClipboardList } from 'lucide-react'
+import { ArrowRight, FileBarChart, Users, Upload, UserCog, ClipboardList, PlusCircle } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/config'
 import { toElectionView } from '@/lib/adapters'
 import type { Votacion } from '@servel/contracts'
@@ -128,8 +128,9 @@ export default function AdminIndexPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
+            { href: '/votaciones/create', icon: <PlusCircle className="h-4 w-4" />, label: 'Crear votación' },
             { href: '/admin/votantes', icon: <Users className="h-4 w-4" />, label: 'Gestionar votantes' },
             { href: '/admin/padron', icon: <Upload className="h-4 w-4" />, label: 'Subir padrón' },
             { href: '/admin/candidatos', icon: <UserCog className="h-4 w-4" />, label: 'Gestionar candidatos' },
