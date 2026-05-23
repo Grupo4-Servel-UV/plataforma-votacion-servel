@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
+import { CreateVotacionInput, EstadoVotacion, REGLAS_NEGOCIO, UpdateVotacionInput } from '@servel/contracts';
 import { CandidatoEntity, VotacionEntity, VotanteEntity, ParticipacionEntity, VotoEntity } from '@servel/database';
 import { DataSource, In, Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -219,6 +219,38 @@ export class VotacionesService {
         votos: votesMap.get(c.id) ?? 0,
       })),
     };
+  }
+
+  private checkLockPeriod(votacion: VotacionEntity) {
+    const minMs = REGLAS_NEGOCIO.MIN_DIAS_ANTICIPACION * REGLAS_NEGOCIO.MS_POR_DIA;
+    const msToOpen = votacion.fechaApertura.getTime() - Date.now();
+    if (votacion.estado !== EstadoVotacion.PENDIENTE || msToOpen < minMs) {
+      throw new ForbiddenException(
+        `Solo se pueden modificar votaciones pendientes con al menos ${REGLAS_NEGOCIO.MIN_DIAS_ANTICIPACION} días de anticipación`,
+      );
+    }
+  }
+
+  async updateVotacion(id: string, input: UpdateVotacionInput) {
+    const votacion = await this.votacionRepo.findOneBy({ id });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    this.checkLockPeriod(votacion);
+
+    if (input.nombre !== undefined) votacion.nombre = input.nombre;
+    if (input.fechaApertura !== undefined) votacion.fechaApertura = new Date(input.fechaApertura);
+    if (input.fechaCierre !== undefined) votacion.fechaCierre = new Date(input.fechaCierre);
+
+    await this.votacionRepo.save(votacion);
+    return { id: votacion.id, message: 'Votación actualizada con éxito' };
+  }
+
+  async deleteVotacion(id: string) {
+    const votacion = await this.votacionRepo.findOneBy({ id });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    this.checkLockPeriod(votacion);
+
+    await this.votacionRepo.remove(votacion);
+    return { message: 'Votación eliminada con éxito' };
   }
 
   async castVote(votacionId: string, rut: string, payload: any, ip = 'unknown') {

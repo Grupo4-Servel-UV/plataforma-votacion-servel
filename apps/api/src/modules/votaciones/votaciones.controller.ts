@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UsePipes, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Req, UsePipes, Query } from '@nestjs/common';
 import {
   AsignarCandidatosInput,
   AsignarCandidatosSchema,
   CreateVotacionInput,
   CreateVotacionSchema,
+  UpdateVotacionInput,
+  UpdateVotacionSchema,
 } from '@servel/contracts';
 import { TipoAdminLog } from '@servel/database';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
@@ -65,6 +67,24 @@ export class VotacionesController {
     @Query('rut') rut: string,
   ) {
     return this.votacionesService.checkEligibility(id, rut);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(UpdateVotacionSchema)) body: UpdateVotacionInput,
+    @Req() req: any,
+  ) {
+    const res = await this.votacionesService.updateVotacion(id, body);
+    this.auditService.logAdminAccion(TipoAdminLog.ACCION_VOTACION, 'EDITAR', `Votación ${id} editada`, extractIp(req), id, body as any).catch(() => {});
+    return res;
+  }
+
+  @Delete(':id')
+  async remove(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: any) {
+    const res = await this.votacionesService.deleteVotacion(id);
+    this.auditService.logAdminAccion(TipoAdminLog.ACCION_VOTACION, 'ELIMINAR', `Votación ${id} eliminada`, extractIp(req), id).catch(() => {});
+    return res;
   }
 
   @Post(':id/votar')
