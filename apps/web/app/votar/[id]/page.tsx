@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import Link from 'next/link'
-import { ServelHeader, ServelFooter } from '@/components/layout/ServelHeader'
+import { ServelHeader } from '@/components/layout/ServelHeader'
 import { BallotCard } from '@/components/ballot/BallotCard'
 import { VoteConfirmModal } from '@/components/ballot/VoteConfirmModal'
 import { BallotFoldAnimation } from '@/components/ballot/BallotFoldAnimation'
@@ -25,13 +25,36 @@ export default function VotePage() {
   const [code, setCode] = useState('')
   const [voteError, setVoteError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [isExpired, setIsExpired] = useState(false)
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/votaciones/${id}`)
       .then((r) => r.json())
-      .then((data) => setElection(toElectionView(data.body ?? data)))
+      .then((data) => {
+        const el = toElectionView(data.body ?? data)
+        if (el.status !== 'ACTIVA') {
+          const msg =
+            el.status === 'CERRADA'
+              ? 'Esta votación ya ha cerrado.'
+              : 'Esta votación aún no está disponible.'
+          setBlockedMessage(msg)
+          setTimeout(() => router.push('/'), 3000)
+          return
+        }
+        setElection(el)
+      })
       .catch(() => router.push('/'))
   }, [id, router])
+
+  if (blockedMessage) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4">
+        <p className="text-lg font-semibold text-foreground">{blockedMessage}</p>
+        <p className="text-sm text-muted-foreground">Serás redirigido al inicio en unos segundos...</p>
+      </div>
+    )
+  }
 
   if (!election) {
     return (
@@ -78,7 +101,11 @@ export default function VotePage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setVoteError(data.message ?? 'Error al registrar voto')
+        const msg: string = data.message ?? 'Error al registrar voto'
+        setVoteError(msg)
+        if (res.status === 403 && msg.toLowerCase().includes('expirado')) {
+          setIsExpired(true)
+        }
         setSubmitting(false)
         return false
       }
@@ -92,8 +119,7 @@ export default function VotePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <ServelHeader />
+    <div className="flex flex-col flex-1">
 
       <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8 pb-32">
         <Link
@@ -148,6 +174,8 @@ export default function VotePage() {
         }}
         submitting={submitting}
         error={voteError}
+        expired={isExpired}
+        onGoHome={() => router.push('/')}
       />
 
       {phase === 'fold' && <BallotFoldAnimation onComplete={onComplete} />}
@@ -186,7 +214,6 @@ export default function VotePage() {
         </div>
       )}
 
-      {phase !== 'success' && phase !== 'fold' && <ServelFooter />}
     </div>
   )
 }

@@ -31,10 +31,15 @@ export class VotacionesController {
     return this.votacionesService.findAll();
   }
 
+  @Get(':id/resultados')
+  async getResultados(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.votacionesService.getResultados(id);
+  }
+
   @Get(':id')
   async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.votacionesService.findOne(id);
-}
+  }
 
   @Get(':id/eligibility')
   async checkEligibility(

@@ -3,11 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CandidatoEntity, VotacionEntity, VotanteEntity, ParticipacionEntity, VotoEntity } from '@servel/database';
 import { VotacionesController } from './votaciones.controller';
 import { VotacionesService } from './votaciones.service';
+import { VotacionesSchedulerService } from './votaciones-scheduler.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([VotacionEntity, CandidatoEntity, VotanteEntity, ParticipacionEntity, VotoEntity])],
   controllers: [VotacionesController],
-  providers: [VotacionesService],
+  providers: [VotacionesService, VotacionesSchedulerService],
   exports: [VotacionesService],
 })
 export class VotacionesModule {}

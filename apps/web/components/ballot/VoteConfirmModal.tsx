@@ -10,9 +10,11 @@ interface Props {
   onConfirm: () => void;
   submitting?: boolean;
   error?: string | null;
+  expired?: boolean;
+  onGoHome?: () => void;
 }
 
-export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm, submitting = false, error = null }: Props) {
+export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm, submitting = false, error = null, expired = false, onGoHome }: Props) {
   return (
     <AnimatePresence>
       {open && (
@@ -66,19 +68,30 @@ export function VoteConfirmModal({ open, candidate, isBlank, onCancel, onConfirm
 
               {error && <div className="text-sm text-destructive mb-3 text-center">{error}</div>}
               <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2.5">
-                <button
-                  onClick={onCancel}
-                  className="flex-1 rounded-md border border-primary bg-card px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/5 transition-colors"
-                >
-                  VOLVER A LA PAPELETA
-                </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={submitting}
-                  className={`flex-1 rounded-md px-4 py-2.5 text-sm font-bold text-primary-foreground transition-colors ${submitting ? 'bg-primary/60 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
-                >
-                  {submitting ? 'ENVIANDO...' : 'CONFIRMAR'}
-                </button>
+                {expired ? (
+                  <button
+                    onClick={onGoHome}
+                    className="flex-1 rounded-md border border-primary bg-card px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    VOLVER AL INICIO
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={onCancel}
+                      className="flex-1 rounded-md border border-primary bg-card px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      VOLVER A LA PAPELETA
+                    </button>
+                    <button
+                      onClick={onConfirm}
+                      disabled={submitting}
+                      className={`flex-1 rounded-md px-4 py-2.5 text-sm font-bold text-primary-foreground transition-colors ${submitting ? 'bg-primary/60 cursor-not-allowed' : 'bg-primary hover:bg-primary/90'}`}
+                    >
+                      {submitting ? 'ENVIANDO...' : 'CONFIRMAR'}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

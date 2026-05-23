@@ -21,6 +21,7 @@ export function ServelHeader() {
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Procesos electorales</Link>
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Resultados</Link>
         <Link href="/votaciones" className="opacity-80 hover:opacity-100 transition-opacity">Administración Votaciones</Link>
+        <Link href="/admin" className="opacity-80 hover:opacity-100 transition-opacity">Admin</Link>
         <Link href="/" className="opacity-80 hover:opacity-100 transition-opacity">Ayuda</Link>
       </nav>
       </div>

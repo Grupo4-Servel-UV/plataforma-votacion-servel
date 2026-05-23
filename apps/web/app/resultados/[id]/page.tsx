@@ -3,20 +3,19 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, FileBarChart } from 'lucide-react'
 import Link from 'next/link'
-import { ServelHeader, ServelFooter } from '@/components/layout/ServelHeader'
 import { ResultsChart } from '@/components/elections/ResultsChart'
 import { API_BASE_URL } from '@/lib/config'
-import { toElectionView } from '@/lib/adapters'
+import { toResultsView } from '@/lib/adapters'
 
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const [election, setElection] = useState<ReturnType<typeof toElectionView> | null>(null)
+  const [election, setElection] = useState<ReturnType<typeof toResultsView> | null>(null)
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/votaciones/${id}`)
+    fetch(`${API_BASE_URL}/votaciones/${id}/resultados`)
       .then((r) => r.json())
-      .then((data) => setElection(toElectionView(data.body ?? data)))
+      .then((data) => setElection(toResultsView(data.body ?? data)))
       .catch(() => router.push('/'))
   }, [id, router])
 
@@ -27,8 +26,7 @@ export default function ResultsPage() {
   )
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <ServelHeader />
+    <div className="flex flex-col flex-1">
       <main className="flex-1 mx-auto w-full max-w-4xl px-4 py-8">
         <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" /> Volver al inicio
@@ -56,7 +54,6 @@ export default function ResultsPage() {
           Resultados oficiales certificados por el Servicio Electoral de Chile.
         </p>
       </main>
-      <ServelFooter />
     </div>
   )
 }

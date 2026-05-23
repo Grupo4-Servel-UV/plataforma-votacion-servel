@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppDataSource, DatabaseModule } from '@servel/database';
 import { CandidatosModule } from './modules/candidatos/candidatos.module';
 import { VotacionesModule } from './modules/votaciones/votaciones.module';
@@ -12,6 +13,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       ...AppDataSource.options,
       autoLoadEntities: true,

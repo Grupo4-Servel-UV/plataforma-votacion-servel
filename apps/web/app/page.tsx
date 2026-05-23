@@ -1,5 +1,4 @@
 import { API_BASE_URL } from '@/lib/config'
-import { ServelHeader, ServelFooter } from '@/components/layout/ServelHeader'
 import { ElectionCard } from '@/components/elections/ElectionCard'
 import { toElectionView } from '@/lib/adapters'
 import type { Votacion } from '@servel/contracts'
