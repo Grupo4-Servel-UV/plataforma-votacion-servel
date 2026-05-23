@@ -16,6 +16,7 @@ export function toResultsView(r: {
     year: new Date(r.fechaApertura).getFullYear(),
     type: 'PRIMERA VUELTA' as const,
     status: r.estado as 'ACTIVA' | 'PENDIENTE' | 'CERRADA',
+    opensAt: r.fechaApertura,
     closesAt: r.fechaCierre,
     serialNumber: r.id.slice(0, 8).toUpperCase(),
     totalVotos: r.totalVotos,
@@ -30,15 +31,17 @@ export function toResultsView(r: {
 }
 
 export function toElectionView(v: Votacion) {
+  const zoneParts = [v.region, v.comuna].filter(Boolean)
   return {
     id: v.id,
     title: v.nombre.toUpperCase(),
     year: new Date(v.fechaApertura).getFullYear(),
     type: 'PRIMERA VUELTA' as const,
     status: v.estado as 'ACTIVA' | 'PENDIENTE' | 'CERRADA',
+    opensAt: v.fechaApertura,
     closesAt: v.fechaCierre,
     serialNumber: v.id.slice(0, 8).toUpperCase(),
-    zone: (v as any).zonaRestriccionId ? `Zona ${(v as any).zonaRestriccionId}` : undefined,
+    zone: zoneParts.length > 0 ? zoneParts.join(' · ') : undefined,
     alreadyVoted: false,
     candidates: (v.candidatos ?? []).map((c, i) => ({
       id: c.id,

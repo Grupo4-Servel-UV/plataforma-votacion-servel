@@ -52,7 +52,7 @@ export function ElectionCard({ election, index }: { election: Election; index: n
             )}
             {status === "PENDIENTE" && (
               <p className="text-xs text-muted-foreground">
-                Inicia el <span className="font-semibold text-foreground">{new Date(election.closesAt).toLocaleDateString("es-CL")}</span>
+                Inicia el <span className="font-semibold text-foreground">{new Date(election.opensAt).toLocaleDateString("es-CL", { dateStyle: 'medium' })}</span>
               </p>
             )}
             {status === "CERRADA" && (

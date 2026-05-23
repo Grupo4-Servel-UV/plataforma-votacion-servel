@@ -1,25 +1,66 @@
+'use client'
+import { useEffect, useState } from 'react'
 import { API_BASE_URL } from '@/lib/config'
 import { ElectionCard } from '@/components/elections/ElectionCard'
 import { toElectionView } from '@/lib/adapters'
 import type { Votacion } from '@servel/contracts'
+import type { Election } from '@/lib/mockData'
 import { ShieldCheck, Lock, FileCheck } from 'lucide-react'
 
-async function getVotaciones(): Promise<Votacion[]> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/votaciones`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.body ?? data ?? []
-  } catch {
-    return []
-  }
-}
+export default function Home() {
+  const [elections, setElections] = useState<Election[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function Home() {
-  const votaciones = await getVotaciones()
-  const elections = votaciones.map(toElectionView)
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/votaciones`)
+        if (!res.ok) { setLoading(false); return }
+        const data = await res.json()
+        const votaciones: Votacion[] = data.body ?? data ?? []
+        const mapped = votaciones.map(toElectionView)
+
+        if (cancelled) return
+
+        // Check participation for ACTIVA elections if RUT is stored in session
+        const rut = typeof window !== 'undefined' ? sessionStorage.getItem('votante_rut') : null
+        if (rut) {
+          const active = mapped.filter((e) => e.status === 'ACTIVA')
+          const checks = await Promise.allSettled(
+            active.map((e) =>
+              fetch(`${API_BASE_URL}/votaciones/${e.id}/eligibility?rut=${encodeURIComponent(rut)}`)
+                .then((r) => r.json())
+                .then((d) => ({ id: e.id, data: d }))
+                .catch(() => ({ id: e.id, data: null }))
+            )
+          )
+          const votedIds = new Set<string>()
+          for (const result of checks) {
+            if (result.status === 'fulfilled') {
+              const { id, data } = result.value
+              if (data && !data.eligible && Array.isArray(data.reasons) && data.reasons.includes('Ya ejerciste tu voto')) {
+                votedIds.add(id)
+              }
+            }
+          }
+          if (cancelled) return
+          setElections(mapped.map((e) => ({ ...e, alreadyVoted: votedIds.has(e.id) })))
+        } else {
+          setElections(mapped)
+        }
+      } catch {
+        // silently fail — show empty
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, [])
+
   const active = elections.filter((e) => e.status === 'ACTIVA')
   const pending = elections.filter((e) => e.status === 'PENDIENTE')
   const closed = elections.filter((e) => e.status === 'CERRADA')
@@ -54,23 +95,29 @@ export default async function Home() {
       </section>
 
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10 space-y-10">
-        <Section title="Elecciones activas" subtitle={`${active.length} proceso(s) disponible(s)`}>
-          {active.length === 0
-            ? <Empty text="No hay procesos activos en este momento." />
-            : <Grid>{active.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
-          }
-        </Section>
+        {loading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">Cargando procesos electorales...</div>
+        ) : (
+          <>
+            <Section title="Elecciones activas" subtitle={`${active.length} proceso(s) disponible(s)`}>
+              {active.length === 0
+                ? <Empty text="No hay procesos activos en este momento." />
+                : <Grid>{active.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
+              }
+            </Section>
 
-        {pending.length > 0 && (
-          <Section title="Próximamente" subtitle="Procesos pendientes de inicio">
-            <Grid>{pending.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
-          </Section>
-        )}
+            {pending.length > 0 && (
+              <Section title="Próximamente" subtitle="Procesos pendientes de inicio">
+                <Grid>{pending.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
+              </Section>
+            )}
 
-        {closed.length > 0 && (
-          <Section title="Resultados oficiales" subtitle="Elecciones cerradas">
-            <Grid>{closed.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
-          </Section>
+            {closed.length > 0 && (
+              <Section title="Resultados oficiales" subtitle="Elecciones cerradas">
+                <Grid>{closed.map((e, i) => <ElectionCard key={e.id} election={e} index={i} />)}</Grid>
+              </Section>
+            )}
+          </>
         )}
       </main>
     </>
