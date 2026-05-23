@@ -177,6 +177,9 @@ export class VotacionesService {
       relations: ['candidatos'],
     });
     if (!votacion) throw new NotFoundException('Votación no encontrada');
+    if (votacion.estado !== EstadoVotacion.CERRADA) {
+      throw new ForbiddenException('Los resultados solo están disponibles cuando la votación ha cerrado');
+    }
 
     const blankCount = await this.votoRepo
       .createQueryBuilder('v')

@@ -14,9 +14,18 @@ export default function ResultsPage() {
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/votaciones/${id}/resultados`)
-      .then((r) => r.json())
-      .then((data) => setElection(toResultsView(data.body ?? data)))
-      .catch(() => router.push('/'))
+      .then((r) => {
+        if (!r.ok) {
+          router.replace('/')
+          return null
+        }
+        return r.json()
+      })
+      .then((data) => {
+        if (!data) return
+        setElection(toResultsView(data.body ?? data))
+      })
+      .catch(() => router.replace('/'))
   }, [id, router])
 
   if (!election) return (
