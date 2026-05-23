@@ -10,6 +10,7 @@ export const CandidatoSchema = z.object({
   partidoPolitico: z.string().nullable(),
   lista: z.string().nullable(),
   descripcion: z.string().nullable(),
+  imagenUrl: z.string().nullable(),
   estado: z.enum(EstadoCandidato),
   creadoEn: z.iso.datetime(),
   actualizadoEn: z.iso.datetime(),

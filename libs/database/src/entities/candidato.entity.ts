@@ -1,13 +1,13 @@
 import { EstadoCandidato } from '@servel/contracts';
 import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+    Column,
+    CreateDateColumn,
+    Entity,
+    Index,
+    JoinColumn,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
 } from 'typeorm';
 import { VotacionEntity } from './votacion.entity';
 
@@ -45,6 +45,9 @@ export class CandidatoEntity {
 
   @Column({ type: 'text', nullable: true })
   descripcion!: string;
+
+  @Column({ name: 'imagen_url', type: 'text', nullable: true })
+  imagenUrl!: string | null;
 
   @Column({
     type: 'enum',

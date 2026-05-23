@@ -9,7 +9,7 @@ export function toElectionView(v: Votacion) {
     status: v.estado as 'ACTIVA' | 'PENDIENTE' | 'CERRADA',
     closesAt: v.fechaCierre,
     serialNumber: v.id.slice(0, 8).toUpperCase(),
-    zone: v.zonaRestriccionId ? `Zona ${v.zonaRestriccionId}` : undefined,
+    zone: (v as any).zonaRestriccionId ? `Zona ${(v as any).zonaRestriccionId}` : undefined,
     alreadyVoted: false,
     candidates: (v.candidatos ?? []).map((c, i) => ({
       id: c.id,

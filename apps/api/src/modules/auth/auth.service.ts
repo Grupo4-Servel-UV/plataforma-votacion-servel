@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { VotanteEntity } from '@servel/database';
+import { VotanteEntity, VotanteResetTokenEntity } from '@servel/database';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { parse } from 'csv-parse/sync';
 import * as path from 'path';
+import { EmailService } from 'src/common/services/email.service';
 import { Repository } from 'typeorm';
 import { LoginInput } from './login.schema';
 import { RegisterInput } from './register.schema';
@@ -14,6 +15,9 @@ export class AuthService {
   constructor(
     @InjectRepository(VotanteEntity)
     private votanteRepo: Repository<VotanteEntity>,
+    @InjectRepository(VotanteResetTokenEntity)
+    private resetRepo: Repository<VotanteResetTokenEntity>,
+    private emailService: EmailService,
   ) {}
 
   async register(input: RegisterInput) {
@@ -315,6 +319,53 @@ export class AuthService {
     }
 
     return { ok: true, total: records.length, added, updated };
+  }
+
+  // Request a password reset: creates token, emails link
+  async requestPasswordReset(rut: string) {
+    const normalized = this.normalizeRut(rut);
+    const votante = await this.votanteRepo.findOneBy({ rut: normalized });
+    if (!votante) throw new BadRequestException('Votante no encontrado');
+    if (!votante.email) throw new BadRequestException('Votante no tiene email registrado');
+
+    const token = crypto.randomBytes(24).toString('hex');
+    const tokenHash = await bcrypt.hash(token, 10);
+    const ttl = Number(process.env.PASSWORD_RESET_TTL_MINUTES ?? 60);
+    const expiresAt = new Date(Date.now() + ttl * 60 * 1000);
+
+    let existing: VotanteResetTokenEntity | null = await this.resetRepo.findOneBy({ votanteId: votante.id });
+    if (!existing) {
+      existing = this.resetRepo.create({ votanteId: votante.id, tokenHash, expiresAt });
+    } else {
+      existing.tokenHash = tokenHash;
+      existing.expiresAt = expiresAt;
+    }
+    await this.resetRepo.save(existing);
+
+    const frontend = process.env.FRONTEND_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+    const link = `${frontend}/auth/reset?rut=${encodeURIComponent(normalized)}&token=${encodeURIComponent(token)}`;
+
+    await this.emailService.sendPasswordReset(votante.email, link);
+    return { ok: true };
+  }
+
+  async resetPassword(rut: string, token: string, newPassword: string) {
+    const normalized = this.normalizeRut(rut);
+    const votante = await this.votanteRepo.findOneBy({ rut: normalized });
+    if (!votante) throw new BadRequestException('Votante no encontrado');
+
+    const tokenRow = await this.resetRepo.findOneBy({ votanteId: votante.id });
+    if (!tokenRow) throw new BadRequestException('Token inválido o no solicitado');
+    if (tokenRow.expiresAt.getTime() < Date.now()) throw new BadRequestException('Token expirado');
+
+    const match = await bcrypt.compare(token, tokenRow.tokenHash);
+    if (!match) throw new BadRequestException('Token inválido');
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    votante.claveHash = hash;
+    await this.votanteRepo.save(votante);
+    await this.resetRepo.remove(tokenRow);
+    return { ok: true };
   }
 
   // Normalize RUT to format XX.XXX.XXX-X or X.XXX.XXX-X when possible.
