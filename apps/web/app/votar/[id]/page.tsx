@@ -173,6 +173,7 @@ export default function VotePage() {
           if (ok) {
             const rut = typeof window !== 'undefined' ? sessionStorage.getItem('votante_rut') : null
             if (rut) {
+              sessionStorage.removeItem('votante_rut')
               fetch(`${API_BASE_URL}/auth/logout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
