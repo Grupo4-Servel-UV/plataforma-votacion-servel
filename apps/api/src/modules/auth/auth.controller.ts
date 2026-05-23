@@ -1,5 +1,6 @@
-import { Body, Controller, ForbiddenException, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Post, Req, UsePipes } from '@nestjs/common';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
+import { AuditService } from '../audit/audit.service';
 import { VotacionesService } from '../votaciones/votaciones.service';
 import { AuthService } from './auth.service';
 import { LoginInput, LoginSchema } from './login.schema';
@@ -7,12 +8,21 @@ import { SendOtpInput, SendOtpSchema, VerifyOtpInput, VerifyOtpSchema } from './
 import { OtpService } from './otp.service';
 import { RegisterInput, RegisterSchema } from './register.schema';
 
+function extractIp(req: any): string {
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+    req.ip ??
+    'unknown'
+  );
+}
+
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(
     private authService: AuthService,
     private otpService: OtpService,
     private votacionesService: VotacionesService,
+    private auditService: AuditService,
   ) {}
 
   @Post('register')
@@ -45,9 +55,15 @@ export class AuthController {
 
   @Post('verify-otp')
   @UsePipes(new ZodValidationPipe(VerifyOtpSchema))
-  async verifyOtp(@Body() body: VerifyOtpInput) {
-    const res = await this.otpService.verifyOtp(body.rut, body.otp);
+  async verifyOtp(@Body() body: VerifyOtpInput, @Req() req: any) {
+    const res = await this.otpService.verifyOtp(body.rut, body.otp, extractIp(req));
     return { body: res };
+  }
+
+  @Post('logout')
+  async logout(@Body() body: { rut: string; motivo?: string }) {
+    await this.auditService.logCierreSesion(body.rut, body.motivo ?? 'Cierre de sesión manual');
+    return { ok: true };
   }
 
   @Post('resend-otp')

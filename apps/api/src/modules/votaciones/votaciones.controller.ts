@@ -1,29 +1,47 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UsePipes, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UsePipes, Query } from '@nestjs/common';
 import {
   AsignarCandidatosInput,
   AsignarCandidatosSchema,
   CreateVotacionInput,
   CreateVotacionSchema,
 } from '@servel/contracts';
+import { TipoAdminLog } from '@servel/database';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
+import { AuditService } from '../audit/audit.service';
 import { VotacionesService } from './votaciones.service';
+
+function extractIp(req: any): string {
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+    req.ip ??
+    'unknown'
+  );
+}
 
 @Controller({ path: 'votaciones', version: '1' })
 export class VotacionesController {
-  constructor(private readonly votacionesService: VotacionesService) {}
+  constructor(
+    private readonly votacionesService: VotacionesService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post()
   @UsePipes(new ZodValidationPipe(CreateVotacionSchema))
-  async create(@Body() input: CreateVotacionInput) {
-    return this.votacionesService.create(input);
+  async create(@Body() input: CreateVotacionInput, @Req() req: any) {
+    const res = await this.votacionesService.create(input);
+    this.auditService.logAdminAccion(TipoAdminLog.ACCION_VOTACION, 'CREAR', `Votación creada: ${input.nombre}`, extractIp(req), res.id).catch(() => {});
+    return res;
   }
 
   @Post(':votacionId/candidatos')
-  asignarCandidatos(
+  async asignarCandidatos(
     @Param('votacionId', new ParseUUIDPipe()) votacionId: string,
     @Body(new ZodValidationPipe(AsignarCandidatosSchema)) body: AsignarCandidatosInput,
+    @Req() req: any,
   ) {
-    return this.votacionesService.asignarCandidatos(votacionId, body.candidatosIds);
+    const res = await this.votacionesService.asignarCandidatos(votacionId, body.candidatosIds);
+    this.auditService.logAdminAccion(TipoAdminLog.ACCION_VOTACION, 'ASIGNAR_CANDIDATOS', `Candidatos asignados a votación ${votacionId}`, extractIp(req), votacionId, { cantidad: body.candidatosIds.length }).catch(() => {});
+    return res;
   }
 
   @Get()
@@ -53,8 +71,8 @@ export class VotacionesController {
   async votar(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: any,
+    @Req() req: any,
   ) {
-    // body expected: { rut: string, payload: any }
-    return this.votacionesService.castVote(id, body.rut, body.payload);
+    return this.votacionesService.castVote(id, body.rut, body.payload, extractIp(req));
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, FileBarChart, Users, Upload, UserCog } from 'lucide-react'
+import { ArrowRight, FileBarChart, Users, Upload, UserCog, ClipboardList } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/config'
 import { toElectionView } from '@/lib/adapters'
 import type { Votacion } from '@servel/contracts'
@@ -133,6 +133,7 @@ export default function AdminIndexPage() {
             { href: '/admin/votantes', icon: <Users className="h-4 w-4" />, label: 'Gestionar votantes' },
             { href: '/admin/padron', icon: <Upload className="h-4 w-4" />, label: 'Subir padrón' },
             { href: '/admin/candidatos', icon: <UserCog className="h-4 w-4" />, label: 'Gestionar candidatos' },
+            { href: '/admin/logs', icon: <ClipboardList className="h-4 w-4" />, label: 'Ver registros de auditoría' },
           ].map(({ href, icon, label }) => (
             <Link
               key={href}

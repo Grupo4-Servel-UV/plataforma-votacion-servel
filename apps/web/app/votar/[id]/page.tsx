@@ -170,7 +170,17 @@ export default function VotePage() {
         onCancel={() => setPhase('select')}
         onConfirm={async () => {
           const ok = await submitVote()
-          if (ok) setPhase('fold')
+          if (ok) {
+            const rut = typeof window !== 'undefined' ? sessionStorage.getItem('votante_rut') : null
+            if (rut) {
+              fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rut, motivo: 'Voto emitido' }),
+              }).catch(() => {})
+            }
+            setPhase('fold')
+          }
         }}
         submitting={submitting}
         error={voteError}

@@ -4,6 +4,7 @@ import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
 import { CandidatoEntity, VotacionEntity, VotanteEntity, ParticipacionEntity, VotoEntity } from '@servel/database';
 import { DataSource, In, Repository } from 'typeorm';
 import * as crypto from 'crypto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class VotacionesService {
@@ -19,6 +20,7 @@ export class VotacionesService {
     @InjectRepository(VotoEntity)
     private readonly votoRepo: Repository<VotoEntity>,
     private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(input: CreateVotacionInput) {
@@ -219,7 +221,7 @@ export class VotacionesService {
     };
   }
 
-  async castVote(votacionId: string, rut: string, payload: any) {
+  async castVote(votacionId: string, rut: string, payload: any, ip = 'unknown') {
     const votacion = await this.votacionRepo.findOneBy({ id: votacionId });
     if (!votacion) throw new NotFoundException('Votación no encontrada');
 
@@ -256,6 +258,7 @@ export class VotacionesService {
       await queryRunner.manager.insert(ParticipacionEntity, { votacionId, votanteHash });
 
       await queryRunner.commitTransaction();
+      this.auditService.logVoto(rut, ip, votacion.region ?? votacion.comuna ?? 'Sin zona', votacionId).catch(() => {});
       return { ok: true };
     } catch (err: any) {
       await queryRunner.rollbackTransaction();

@@ -5,6 +5,7 @@ import { VotanteEntity } from '@servel/database';
 import { VotanteOtpEntity } from '@servel/database';
 import * as bcrypt from 'bcryptjs';
 import { EmailService } from 'src/common/services/email.service';
+import { AuditService } from '../audit/audit.service';
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -16,6 +17,7 @@ export class OtpService {
     @InjectRepository(VotanteEntity) private votanteRepo: Repository<VotanteEntity>,
     @InjectRepository(VotanteOtpEntity) private otpRepo: Repository<VotanteOtpEntity>,
     private emailService: EmailService,
+    private auditService: AuditService,
   ) {}
 
   private otpTtlMinutes = Number(process.env.OTP_TTL_MINUTES ?? 5);
@@ -45,7 +47,7 @@ export class OtpService {
     return { ok: true };
   }
 
-  async verifyOtp(rut: string, code: string) {
+  async verifyOtp(rut: string, code: string, ip = 'unknown') {
     const normalized = this.normalizeRut(rut);
     const votante = await this.votanteRepo.findOneBy({ rut: normalized });
     if (!votante) throw new BadRequestException('Votante no encontrado');
@@ -58,16 +60,18 @@ export class OtpService {
     const match = await bcrypt.compare(code, otpRow.otpHash);
     if (match) {
       await this.otpRepo.remove(otpRow);
+      await this.auditService.logAutenticacion(normalized, ip, 'EXITOSO');
       return { ok: true };
     }
 
     otpRow.attempts = (otpRow.attempts ?? 0) + 1;
     await this.otpRepo.save(otpRow);
     if (otpRow.attempts >= this.maxAttempts) {
-      // remove row on lockout
       await this.otpRepo.remove(otpRow);
+      await this.auditService.logIntentoFallido(normalized, ip, otpRow.attempts, true);
       return { ok: false, locked: true };
     }
+    await this.auditService.logIntentoFallido(normalized, ip, otpRow.attempts, false);
     return { ok: false, attempts: otpRow.attempts };
   }
 
