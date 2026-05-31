@@ -17,9 +17,7 @@
         "strictBindCallApply": false,
         "forceConsistentCasingInFileNames": false,
         "noFallthroughCasesInSwitch": false,
-        "rootDir": "./src",
         "baseUrl": "./",
-        "ignoreDeprecations": "6.0",
         "paths": {
             "@/*": [
                 "./*"
