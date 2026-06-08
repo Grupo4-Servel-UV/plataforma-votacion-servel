@@ -1,4 +1,5 @@
 import { Body, Controller, ForbiddenException, Post, Req, UsePipes } from '@nestjs/common';
+import { TipoAdminLog } from '@servel/database';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
 import { AuditService } from '../audit/audit.service';
 import { VotacionesService } from '../votaciones/votaciones.service';
@@ -27,8 +28,16 @@ export class AuthController {
 
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
-  async register(@Body() body: RegisterInput) {
+  async register(@Body() body: RegisterInput, @Req() req: any) {
     const res = await this.authService.register(body);
+    this.auditService
+      .logAdminAccion(
+        TipoAdminLog.ACCION_VOTANTE,
+        'REGISTRAR',
+        `Votante registrado: ${body.rut}`,
+        extractIp(req),
+      )
+      .catch(() => {});
     return { body: res };
   }
 
@@ -74,14 +83,30 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  async requestPasswordReset(@Body() body: { rut: string }) {
+  async requestPasswordReset(@Body() body: { rut: string }, @Req() req: any) {
     const res = await this.authService.requestPasswordReset(body.rut);
+    this.auditService
+      .logAdminAccion(
+        TipoAdminLog.ACCION_VOTANTE,
+        'SOLICITAR_RESET_CLAVE',
+        `Solicitud de reset de clave para votante: ${body.rut}`,
+        extractIp(req),
+      )
+      .catch(() => {});
     return { body: res };
   }
 
   @Post('reset-password')
-  async resetPassword(@Body() body: { rut: string; token: string; newPassword: string }) {
+  async resetPassword(@Body() body: { rut: string; token: string; newPassword: string }, @Req() req: any) {
     const res = await this.authService.resetPassword(body.rut, body.token, body.newPassword);
+    this.auditService
+      .logAdminAccion(
+        TipoAdminLog.ACCION_VOTANTE,
+        'RESET_CLAVE',
+        `Clave restablecida para votante: ${body.rut}`,
+        extractIp(req),
+      )
+      .catch(() => {});
     return { body: res };
   }
 }
