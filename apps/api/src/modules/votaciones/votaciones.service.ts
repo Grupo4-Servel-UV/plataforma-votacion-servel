@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateVotacionInput, EstadoVotacion } from '@servel/contracts';
+import { CreateVotacionInput, EstadoVotacion, REGLAS_NEGOCIO, UpdateVotacionInput } from '@servel/contracts';
 import { CandidatoEntity, VotacionEntity, VotanteEntity, ParticipacionEntity, VotoEntity } from '@servel/database';
 import { DataSource, In, Repository } from 'typeorm';
 import * as crypto from 'crypto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class VotacionesService {
@@ -19,6 +20,7 @@ export class VotacionesService {
     @InjectRepository(VotoEntity)
     private readonly votoRepo: Repository<VotoEntity>,
     private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(input: CreateVotacionInput) {
@@ -171,10 +173,97 @@ export class VotacionesService {
     return { eligible: reasons.length === 0, reasons };
   }
 
-  async castVote(votacionId: string, rut: string, payload: any) {
-    // validate votacion exists
+  async getResultados(votacionId: string) {
+    const votacion = await this.votacionRepo.findOne({
+      where: { id: votacionId },
+      relations: ['candidatos'],
+    });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    if (votacion.estado !== EstadoVotacion.CERRADA) {
+      throw new ForbiddenException('Los resultados solo están disponibles cuando la votación ha cerrado');
+    }
+
+    const blankCount = await this.votoRepo
+      .createQueryBuilder('v')
+      .where('v.votacionId = :votacionId', { votacionId })
+      .andWhere("v.payload->>'blank' = 'true'")
+      .getCount();
+
+    const candidateVotesRaw = await this.votoRepo
+      .createQueryBuilder('v')
+      .select("v.payload->>'candidateId'", 'candidateId')
+      .addSelect('COUNT(*)', 'votos')
+      .where('v.votacionId = :votacionId', { votacionId })
+      .andWhere("v.payload->>'candidateId' IS NOT NULL")
+      .groupBy("v.payload->>'candidateId'")
+      .getRawMany<{ candidateId: string; votos: string }>();
+
+    const votesMap = new Map(
+      candidateVotesRaw.map((r) => [r.candidateId, parseInt(r.votos, 10)]),
+    );
+
+    const totalCandidateVotes = candidateVotesRaw.reduce((sum, r) => sum + parseInt(r.votos, 10), 0);
+
+    return {
+      id: votacion.id,
+      nombre: votacion.nombre,
+      estado: votacion.estado,
+      fechaApertura: votacion.fechaApertura,
+      fechaCierre: votacion.fechaCierre,
+      totalVotos: blankCount + totalCandidateVotes,
+      votosBlancos: blankCount,
+      candidatos: votacion.candidatos.map((c) => ({
+        id: c.id,
+        nombres: c.nombres,
+        apellidos: c.apellidos,
+        votos: votesMap.get(c.id) ?? 0,
+      })),
+    };
+  }
+
+  private checkLockPeriod(votacion: VotacionEntity) {
+    const minMs = REGLAS_NEGOCIO.MIN_DIAS_ANTICIPACION * REGLAS_NEGOCIO.MS_POR_DIA;
+    const msToOpen = votacion.fechaApertura.getTime() - Date.now();
+    if (votacion.estado !== EstadoVotacion.PENDIENTE || msToOpen < minMs) {
+      throw new ForbiddenException(
+        `Solo se pueden modificar votaciones pendientes con al menos ${REGLAS_NEGOCIO.MIN_DIAS_ANTICIPACION} días de anticipación`,
+      );
+    }
+  }
+
+  async updateVotacion(id: string, input: UpdateVotacionInput) {
+    const votacion = await this.votacionRepo.findOneBy({ id });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    this.checkLockPeriod(votacion);
+
+    if (input.nombre !== undefined) votacion.nombre = input.nombre;
+    if (input.fechaApertura !== undefined) votacion.fechaApertura = new Date(input.fechaApertura);
+    if (input.fechaCierre !== undefined) votacion.fechaCierre = new Date(input.fechaCierre);
+
+    await this.votacionRepo.save(votacion);
+    return { id: votacion.id, message: 'Votación actualizada con éxito' };
+  }
+
+  async deleteVotacion(id: string) {
+    const votacion = await this.votacionRepo.findOneBy({ id });
+    if (!votacion) throw new NotFoundException('Votación no encontrada');
+    this.checkLockPeriod(votacion);
+
+    await this.votacionRepo.remove(votacion);
+    return { message: 'Votación eliminada con éxito' };
+  }
+
+  async castVote(votacionId: string, rut: string, payload: any, ip = 'unknown') {
     const votacion = await this.votacionRepo.findOneBy({ id: votacionId });
     if (!votacion) throw new NotFoundException('Votación no encontrada');
+
+    const now = new Date();
+    if (now >= votacion.fechaCierre) {
+      throw new ForbiddenException('El plazo de votación ha expirado');
+    }
+    if (votacion.estado !== EstadoVotacion.ACTIVA) {
+      throw new ForbiddenException('La votación no está activa');
+    }
 
     const clean = String(rut).replace(/\.|-|\s/g, '');
     const secret = process.env.VOTANTE_HASH_SECRET ?? '';
@@ -201,6 +290,7 @@ export class VotacionesService {
       await queryRunner.manager.insert(ParticipacionEntity, { votacionId, votanteHash });
 
       await queryRunner.commitTransaction();
+      this.auditService.logVoto(rut, ip, votacion.region ?? votacion.comuna ?? 'Sin zona', votacionId).catch(() => {});
       return { ok: true };
     } catch (err: any) {
       await queryRunner.rollbackTransaction();

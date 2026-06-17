@@ -14,7 +14,8 @@ export interface Election {
   year: number;
   type: ElectionType;
   status: ElectionStatus;
-  closesAt: string; // ISO
+  opensAt: string;  // ISO — fechaApertura
+  closesAt: string; // ISO — fechaCierre
   serialNumber: string;
   zone?: string;
   alreadyVoted?: boolean;
@@ -31,6 +32,7 @@ export const elections: Election[] = [
     year: 2025,
     type: "PRIMERA VUELTA",
     status: "ACTIVA",
+    opensAt: "2026-03-01T08:00:00",
     closesAt: "2026-04-26T18:00:00",
     serialNumber: "00847291",
     candidates: [
@@ -50,6 +52,7 @@ export const elections: Election[] = [
     year: 2025,
     type: "MUNICIPAL",
     status: "ACTIVA",
+    opensAt: "2026-03-01T08:00:00",
     closesAt: "2026-04-30T18:00:00",
     serialNumber: "00004521",
     zone: "Solo Comuna de Providencia",
@@ -66,6 +69,7 @@ export const elections: Election[] = [
     year: 2025,
     type: "SEGUNDA VUELTA",
     status: "PENDIENTE",
+    opensAt: "2026-05-10T08:00:00",
     closesAt: "2026-05-15T18:00:00",
     serialNumber: "00900200",
     candidates: [
@@ -79,6 +83,7 @@ export const elections: Election[] = [
     year: 2024,
     type: "PLEBISCITO",
     status: "CERRADA",
+    opensAt: "2024-12-10T08:00:00",
     closesAt: "2024-12-17T18:00:00",
     serialNumber: "00088121",
     totalEligible: 15400000,

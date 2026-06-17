@@ -39,7 +39,7 @@ function CandidateRow({
       {/* Marking line — becomes a check when selected */}
       <div className="relative flex h-7 w-16 shrink-0 items-center">
         {!selected ? (
-          <div className="h-[2px] w-full bg-foreground/35" />
+          <div className="h-0.5 w-full bg-foreground/35" />
         ) : (
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
@@ -137,7 +137,7 @@ export function BallotCard({ election, selected, onSelect }: Props) {
         </div>
 
         {/* Right stub with vertical serial + signature notch */}
-        <div className="relative w-[88px] shrink-0">
+        <div className="relative w-22 shrink-0">
           {/* Dashed perforation line */}
           <div
             className="absolute left-0 top-0 bottom-0 w-px"

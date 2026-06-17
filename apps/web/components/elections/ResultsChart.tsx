@@ -7,16 +7,13 @@ export function ResultsChart({ election }: { election: Election }) {
     election.candidates.reduce((s, c) => s + (c.votes ?? 0), 0) +
     (election.blankVotes ?? 0);
   const max = Math.max(...election.candidates.map((c) => c.votes ?? 0), 1);
-  const participation = election.totalEligible
-    ? ((total / election.totalEligible) * 100).toFixed(1)
-    : "—";
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="grid grid-cols-3 gap-4 pb-6 border-b border-border">
         <Stat label="Votos válidos" value={(total - (election.blankVotes ?? 0)).toLocaleString("es-CL")} />
         <Stat label="Votos en blanco" value={(election.blankVotes ?? 0).toLocaleString("es-CL")} />
-        <Stat label="Participación" value={`${participation}%`} />
+        <Stat label="Total emitidos" value={total.toLocaleString("es-CL")} />
       </div>
 
       <div className="mt-6 space-y-5">
