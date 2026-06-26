@@ -1,0 +1,3 @@
+rut,nombres,apellidos,email,region,comuna,estado_habilitacion,fecha_nacimiento,comunidad_indigena,etnia
+10.111.222-3,Beatriz,Fuentes,beatriz.fuentes@test.com,Valparaíso,Viña del Mar,habilitado,19950315,,
+20.333.444-5,Rodrigo,Carvajal,rodrigo.carvajal@test.com,Biobío,Concepción,habilitado,19881010,,

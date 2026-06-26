@@ -1,0 +1,3 @@
+rut,nombres,apellidos,email,region,comuna,estado_habilitacion,fecha_nacimiento,comunidad_indigena,etnia
+12.345.678-5,Juan,Pérez García,juan.perez.act@test.com,Valparaíso,Valparaíso,habilitado,19800101,,
+9.876.543-2,Ana,López Ramos,ana.lopez.act@test.com,Biobío,Concepción,habilitado,19881120,,

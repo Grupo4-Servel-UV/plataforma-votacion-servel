@@ -1,0 +1,3 @@
+Este archivo simula un Excel (.xlsx) enviado por error.
+No es un archivo CSV ni JSON valido.
+El servidor debe rechazarlo con un error de formato.
